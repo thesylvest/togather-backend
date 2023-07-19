@@ -1,5 +1,4 @@
-from tortoise import models
-from tortoise import fields
+from tortoise import models, fields
 
 
 class BaseDBModel(models.Model):
