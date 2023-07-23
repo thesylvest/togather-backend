@@ -9,7 +9,6 @@ from app.core.auth.utils import password
 
 
 class User(BaseDBModel, BaseCreatedUpdatedAtModel, UUIDDBModel):
-
     username = fields.CharField(max_length=20, unique=True)
     email = fields.CharField(max_length=255, unique=True)
     first_name = fields.CharField(max_length=50, null=True)

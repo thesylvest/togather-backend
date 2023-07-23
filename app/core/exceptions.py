@@ -1,25 +1,17 @@
+from fastapi.responses import JSONResponse
 from fastapi.requests import Request
-from starlette.responses import JSONResponse
-
-
-class SettingNotFound(Exception):
-    pass
 
 
 class APIException(Exception):
-    """
-    Инстанциирование объекта исключения приводит к формированию
-    респонса с кодом status_code, кодом error_code,
-    и сообщениями message и detail(опционально).
-    """
-    def __init__(self,
-                 error_code: int = 000,
-                 status_code: int = 500,
-                 detail="",
-                 message="",
-                 *args,
-                 **kwargs
-                 ):
+    def __init__(
+        self,
+        error_code: int = 000,
+        status_code: int = 500,
+        detail="",
+        message="",
+        *args,
+        **kwargs
+    ):
         Exception.__init__(self, *args, **kwargs)
 
         self.error_code = error_code
