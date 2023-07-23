@@ -1,28 +1,18 @@
-from typing import Optional
-
 from tortoise import fields
-from tortoise.exceptions import DoesNotExist
-
+from app.core.base.base_models import Tag, Category
+from app.applications.users.models import User
 from app.core.base.base_models import (
     BaseCreatedAtModel,
-    BaseCreatedUpdatedAtModel,
-    UUIDDBModel,
     BaseDBModel,
 )
-from app.applications.posts.models import Post
 
-class Event(BaseDBModel, BaseCreatedAtModel, UUIDDBModel):
+
+class Event(BaseDBModel, BaseCreatedAtModel):
     name = fields.CharField(max_length=255)
-    host_user = fields.ForeignKeyRelation["User"] = fields.ForeignKeyField(
-        "models.User", related_name="hosted_events", null=True
-    )
-    host_club = fields.ForeignKeyRelation["Club"] = fields.ForeignKeyField(
-        "models.Club", related_name="hosted_events", null=True
-    )
     description = fields.TextField()
-    picture = fields.JSONField(null=True)
+    picture = fields.CharField(max_length=255, null=True)
     links = fields.JSONField(null=True)
-    # TODO: form
+    form = fields.JSONField(null=True)
     start_date = fields.DatetimeField()
     end_date = fields.DatetimeField()
     location = fields.JSONField(null=True)
@@ -30,39 +20,32 @@ class Event(BaseDBModel, BaseCreatedAtModel, UUIDDBModel):
     rate = fields.FloatField(default=0)
     qr_code = fields.JSONField(null=True)
     verification_link = fields.CharField(max_length=255, null=True)
-    responses = fields.ReverseRelation["FormResponse"]
-    category = fields.ForeignKeyRelation["Category"] = fields.ForeignKeyField(
+    responses: fields.ReverseRelation["FormResponse"]
+    host_user: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
+        "models.User", related_name="hosted_events", null=True
+    )
+    host_club: fields.ForeignKeyRelation["Club"] = fields.ForeignKeyField(
+        "models.Club", related_name="hosted_events", null=True
+    )
+    category: fields.ForeignKeyRelation[Category] = fields.ForeignKeyField(
         "models.Category", related_name="events", null=True
     )
-    tags = fields.ManyToManyRelation["Tag"] = fields.ManyToManyField(
+    tags: fields.ManyToManyRelation[Tag] = fields.ManyToManyField(
         "models.Tag", related_name="events", through="event_tag"
     )
 
     class Meta:
         table = "events"
 
-class FormResponse(BaseDBModel, BaseCreatedUpdatedAtModel, UUIDDBModel):
+
+class FormResponse(BaseDBModel, BaseCreatedAtModel):
     data = fields.JSONField()
-    event = fields.ForeignKeyRelation[Event] = fields.ForeignKeyField(
+    event: fields.ForeignKeyRelation[Event] = fields.ForeignKeyField(
         "models.Event", related_name="responses"
     )
-    user = fields.ForeignKeyRelation["User"] = fields.ForeignKeyField(
+    user: fields.ForeignKeyRelation["User"] = fields.ForeignKeyField(
         "models.User", related_name="form_responses"
     )
 
     class Meta:
         table = "form_responses"
-
-class Category(BaseDBModel, UUIDDBModel):
-    name = fields.CharField(max_length=255)
-    picture = fields.JSONField(null=True)
-    events = fields.ReverseRelation[Event]
-
-class Tag(BaseDBModel, UUIDDBModel):
-    name = fields.CharField(max_length=255)
-    events = fields.ManyToManyRelation[Event] = fields.ManyToManyField(
-        "models.Event", related_name="tags", through="event_tag"
-    )
-    posts = fields.ManyToManyRelation[Post] = fields.ManyToManyField(
-        "models.Post", related_name="tags", through="post_tag"
-    )

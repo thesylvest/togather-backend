@@ -6,13 +6,12 @@ from tortoise.exceptions import DoesNotExist
 from app.applications.users.schemas import BaseUserCreate
 from app.core.base.base_models import (
     BaseCreatedAtModel,
-    UUIDDBModel,
     BaseDBModel,
 )
 from app.core.auth.utils import password
 
 
-class User(BaseDBModel, BaseCreatedAtModel, UUIDDBModel):
+class User(BaseDBModel, BaseCreatedAtModel):
     username = fields.CharField(max_length=20, unique=True)
     email = fields.CharField(max_length=255, unique=True)
     first_name = fields.CharField(max_length=50, null=True)
@@ -26,23 +25,19 @@ class User(BaseDBModel, BaseCreatedAtModel, UUIDDBModel):
     social_links = fields.JSONField(null=True)
     birth_date = fields.DateField(null=True)
     location = fields.JSONField(null=True)
-    profile_picture = fields.JSONField(null=True)
+    profile_picture = fields.CharField(max_length=255, null=True)
     # TODO: unread_notifications =
     sent_connections: fields.ReverseRelation["Connection"]
     received_connections: fields.ReverseRelation["Connection"]
-    blocked_users: fields.ManyToManyRelation["User"] = fields.ManyToManyField(
-        "models.User", related_name="blocked_users", through="blocked"
-    )
-    posts = fields.ReverseRelation["Post"]
-    comments = fields.ReverseRelation["Comment"]
-    clubs = fields.ManyToManyRelation["Club"] = fields.ManyToManyField(
-        "models.Club", related_name="members", through="memberships"
-    )
-    university = fields.ForeignKeyRelation["University"] = fields.ForeignKeyField(
+    blocked_users: fields.ReverseRelation["Blocked"]
+    posts: fields.ReverseRelation["Post"]
+    comments: fields.ReverseRelation["Comment"]
+    form_responses: fields.ReverseRelation["FormResponse"]
+    hosted_events: fields.ReverseRelation["Event"]
+    university: fields.ForeignKeyRelation["University"] = fields.ForeignKeyField(
         "models.University", related_name="students", null=True
     )
-    form_responses = fields.ReverseRelation["FormResponse"]
-    hosted_events = fields.ReverseRelation["Event"]
+    # TODO: Muti will add clubs field
 
     def full_name(self) -> str:
         if self.first_name or self.last_name:
@@ -80,6 +75,19 @@ class User(BaseDBModel, BaseCreatedAtModel, UUIDDBModel):
         computed = ["full_name"]
 
 
+class Connection(BaseDBModel):
+    is_accepted = fields.BooleanField(default=False)
+    from_user: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
+        "models.User", related_name="sent_connections"
+    )
+    to_user: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
+        "models.User", related_name="received_connections"
+    )
+
+    class Meta:
+        table = "connections"
+
+
 class Blocked(BaseDBModel):
     blocking_user: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
         "models.User"
@@ -92,25 +100,12 @@ class Blocked(BaseDBModel):
         table = "blocked"
 
 
-class Connection(BaseDBModel):
-    from_user = fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
-        "models.User", related_name="sent_connections"
-    )
-    to_user = fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
-        "models.User", related_name="received_connections"
-    )
-    is_accepted = fields.BooleanField(default=False)
-
-    class Meta:
-        table = "connections"
-
-
 class University(BaseDBModel):
     name = fields.CharField(max_length=255, unique=True)
     location = fields.JSONField(null=True)
-    clubs = fields.ReverseRelation["Club"]
-    students = fields.ReverseRelation["User"]
-    events = fields.ReverseRelation["Event"]
+    clubs: fields.ReverseRelation["Club"]
+    students: fields.ReverseRelation["User"]
+    events: fields.ReverseRelation["Event"]
 
     class Meta:
         table = "universities"

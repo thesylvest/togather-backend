@@ -5,28 +5,27 @@ from tortoise.exceptions import DoesNotExist
 
 from app.core.base.base_models import (
     BaseCreatedUpdatedAtModel,
-    UUIDDBModel,
     BaseDBModel,
 )
 
 from app.applications.users.models import User
-from app.applications.events.models import Tag
+from app.core.base.base_models import Tag
 
-class Post(BaseDBModel, BaseCreatedUpdatedAtModel, UUIDDBModel):
+
+class Post(BaseDBModel, BaseCreatedUpdatedAtModel):
     is_anon = fields.BooleanField(default=False)
     title = fields.CharField(max_length=255)
+    media = fields.CharField(max_length=255, null=True)
     content = fields.TextField()
-    author_user = fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
+    location = fields.JSONField(null=True)
+    comments: fields.ReverseRelation["Comment"]
+    author_user: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
         "models.User", related_name="posts", null=True
     )
-    author_club = fields.ForeignKeyRelation[Club] = fields.ForeignKeyField(
+    author_club: fields.ForeignKeyRelation[Club] = fields.ForeignKeyField(
         "models.Club", related_name="posts", null=True
     )
-    date = fields.DatetimeField(auto_now_add=True)
-    media = fields.JSONField(null=True)
-    location = fields.JSONField(null=True)
-    comments = fields.ReverseRelation["Comment"]
-    tags = fields.ManyToManyRelation[Tag] = fields.ManyToManyField(
+    tags: fields.ManyToManyRelation[Tag] = fields.ManyToManyField(
         "models.Tag", related_name="posts", through="post_tag"
     )
 
@@ -34,20 +33,19 @@ class Post(BaseDBModel, BaseCreatedUpdatedAtModel, UUIDDBModel):
         table = "posts"
 
 
-class Comment(BaseDBModel, BaseCreatedUpdatedAtModel, UUIDDBModel):
+class Comment(BaseDBModel, BaseCreatedUpdatedAtModel):
     is_anon = fields.BooleanField(default=False)
     content = fields.TextField()
-    author = fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
+    media = fields.CharField(max_length=255, null=True)
+    location = fields.JSONField(null=True)
+    comments: fields.ReverseRelation["Comment"]
+    author: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
         "models.User", related_name="comments"
     )
-    post = fields.ForeignKeyRelation[Post] = fields.ForeignKeyField(
+    post: fields.ForeignKeyRelation[Post] = fields.ForeignKeyField(
         "models.Post", related_name="comments"
     )
-    date = fields.DatetimeField(auto_now_add=True)
-    media = fields.JSONField(null=True)
-    location = fields.JSONField(null=True)
-    comments = fields.ReverseRelation["Comment"]
-    reply_to = fields.ForeignKeyRelation["Comment"] = fields.ForeignKeyField(
+    reply_to: fields.ForeignKeyRelation["Comment"] = fields.ForeignKeyField(
         "models.Comment", related_name="comments", null=True
     )
 
