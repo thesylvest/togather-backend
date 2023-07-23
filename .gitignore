@@ -257,3 +257,4 @@ app/settings/config.py
 docker-stack.yml
 !/docker/postgres/.gitkeep
 /aerich.ini
+.vscode

@@ -5,14 +5,14 @@ from tortoise.exceptions import DoesNotExist
 
 from app.applications.users.schemas import BaseUserCreate
 from app.core.base.base_models import (
-    BaseCreatedUpdatedAtModel,
+    BaseCreatedAtModel,
     UUIDDBModel,
     BaseDBModel,
 )
 from app.core.auth.utils import password
 
 
-class User(BaseDBModel, BaseCreatedUpdatedAtModel, UUIDDBModel):
+class User(BaseDBModel, BaseCreatedAtModel, UUIDDBModel):
     username = fields.CharField(max_length=20, unique=True)
     email = fields.CharField(max_length=255, unique=True)
     first_name = fields.CharField(max_length=50, null=True)
@@ -28,9 +28,9 @@ class User(BaseDBModel, BaseCreatedUpdatedAtModel, UUIDDBModel):
     location = fields.JSONField(null=True)
     profile_picture = fields.JSONField(null=True)
     # TODO: unread_notifications =
-    sent_connections = fields.ReverseRelation["Connection"]
-    received_connections = fields.ReverseRelation["Connection"]
-    blocked_users = fields.ManyToManyRelation["User"] = fields.ManyToManyField(
+    sent_connections: fields.ReverseRelation["Connection"]
+    received_connections: fields.ReverseRelation["Connection"]
+    blocked_users: fields.ManyToManyRelation["User"] = fields.ManyToManyField(
         "models.User", related_name="blocked_users", through="blocked"
     )
     posts = fields.ReverseRelation["Post"]
@@ -79,12 +79,25 @@ class User(BaseDBModel, BaseCreatedUpdatedAtModel, UUIDDBModel):
     class PydanticMeta:
         computed = ["full_name"]
 
+
+class Blocked(BaseDBModel):
+    blocking_user: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
+        "models.User"
+    )
+    blocked_user: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
+        "models.User", related_name="blocked_users"
+    )
+
+    class Meta:
+        table = "blocked"
+
+
 class Connection(BaseDBModel):
     from_user = fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
-        "models.User", related_name="from_user"
+        "models.User", related_name="sent_connections"
     )
     to_user = fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
-        "models.User", related_name="to_user"
+        "models.User", related_name="received_connections"
     )
     is_accepted = fields.BooleanField(default=False)
 
@@ -101,15 +114,3 @@ class University(BaseDBModel):
 
     class Meta:
         table = "universities"
-
-class Membership(BaseDBModel):
-    user = fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
-        "models.User", related_name="user"
-    )
-    club = fields.ForeignKeyRelation[Club] = fields.ForeignKeyField(
-        "models.Club", related_name="club"
-    )
-    is_admin = fields.BooleanField(default=False)
-
-    class Meta:
-        table = "memberships"
