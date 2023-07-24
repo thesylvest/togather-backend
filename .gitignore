@@ -242,8 +242,6 @@ fabric.properties
 .idea/caches/build_file_checksums.ser
 .idea
 *.db*
-app/settings/config.py
-.prod.env
 .local.env
 .prod.full.env
 !/app/templates/emails/build/
