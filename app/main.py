@@ -1,4 +1,5 @@
 from tortoise.contrib.fastapi import register_tortoise
+from firebase_admin import credentials, initialize_app
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 import logging.config
@@ -46,6 +47,9 @@ register_tortoise(
     generate_schemas=True,
     add_exception_handlers=True,
 )
+
+cred = credentials.Certificate(cert=config.messaging_credential_path)
+initialize_app(cred)
 
 app.add_exception_handler(APIException, on_api_exception)
 app.include_router(login_router, prefix='/api/auth/login')

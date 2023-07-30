@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Body, HTTPException, BackgroundTasks, status
-from datetime import timedelta
 
 from app.core.auth.utils.contrib import (
     generate_password_reset_token,
@@ -13,7 +12,6 @@ from app.core.auth.utils.jwt import create_access_token
 from app.applications.users.utils import update_last_login
 from app.applications.users.models import User
 
-from app.settings import config
 
 router = APIRouter()
 
