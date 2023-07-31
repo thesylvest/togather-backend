@@ -9,7 +9,6 @@ class ModelType(str, Enum):
     event = "Event"
     club = "Club"
     place = "Place"
-    place
 
 
 class ContentType:
