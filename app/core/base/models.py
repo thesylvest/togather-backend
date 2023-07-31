@@ -2,6 +2,8 @@ from tortoise import models, fields
 
 
 class BaseDBModel(models.Model):
+    class Meta:
+        abstract = True
     id = fields.BigIntField(pk=True, index=True)
 
     async def to_dict(self):
@@ -11,13 +13,6 @@ class BaseDBModel(models.Model):
         for field in self._meta.backward_fk_fields:
             d[field] = await getattr(self, field).all().values()
         return d
-
-    class Meta:
-        abstract = True
-
-
-class UUIDDBModel:
-    hashed_id = fields.UUIDField(unique=True, pk=False)
 
 
 class BaseCreatedAtModel:
@@ -29,20 +24,6 @@ class BaseCreatedUpdatedAtModel:
     updated_at = fields.DatetimeField(auto_now=True)
 
 
-# TODO: rewrite these
-# class Category(BaseDBModel):
-#   name = fields.CharField(max_length=255)
-#   picture = fields.CharField(max_length=255, null=True)
-#   events = fields.ReverseRelation[Event]
-
-#   class Meta:
-#       table = "categories"
-
-
-# class Tag(BaseDBModel):
-#   name = fields.CharField(max_length=255)
-#   events: fields.ManyToManyRelation[Event]
-#   posts: fields.ManyToManyRelation[Post]
-
-#   class Meta:
-#       table = "tags"
+class LocationModel:
+    latitude = fields.DecimalField(max_digits=9, decimal_places=6)
+    longitude = fields.DecimalField(max_digits=9, decimal_places=6)

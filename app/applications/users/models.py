@@ -1,18 +1,21 @@
 from typing import Optional
 
-from tortoise import fields
 from tortoise.exceptions import DoesNotExist
+from tortoise import fields
 
-from app.applications.users.schemas import BaseUserCreate
-from app.core.base.base_models import (
+from app.core.auth.utils import password
+from .schemas import BaseUserCreate
+from app.core.base.models import (
     BaseCreatedAtModel,
+    LocationModel,
     BaseDBModel,
 )
-from app.core.auth.utils import password
 
 
-class User(BaseDBModel, BaseCreatedAtModel):
-    username = fields.CharField(max_length=20, unique=True)
+class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
+    class Meta:
+        table = "users"
+    username = fields.CharField(max_length=50, unique=True)
     email = fields.CharField(max_length=255, unique=True)
     first_name = fields.CharField(max_length=50, null=True)
     last_name = fields.CharField(max_length=50, null=True)
@@ -24,25 +27,25 @@ class User(BaseDBModel, BaseCreatedAtModel):
     gender = fields.CharField(max_length=10, null=True)
     social_links = fields.JSONField(null=True)
     birth_date = fields.DateField(null=True)
-    location = fields.JSONField(null=True)
     profile_picture = fields.CharField(max_length=255, null=True)
-    # TODO: unread_notifications =
-    sent_connections: fields.ReverseRelation["Connection"]
-    received_connections: fields.ReverseRelation["Connection"]
-    blocked_users: fields.ReverseRelation["Blocked"]
-    posts: fields.ReverseRelation["Post"]
-    comments: fields.ReverseRelation["Comment"]
-    form_responses: fields.ReverseRelation["FormResponse"]
-    hosted_events: fields.ReverseRelation["Event"]
-    university: fields.ForeignKeyRelation["University"] = fields.ForeignKeyField(
+    unread_notifications = fields.IntField(default=0)
+
+    sent_connections: fields.ReverseRelation["models.Connection"]
+    received_connections: fields.ReverseRelation["models.Connection"]
+    blocked_users: fields.ReverseRelation["models.Blocked"]
+    posts: fields.ReverseRelation["models.Post"]
+    comments: fields.ReverseRelation["models.Comment"]
+    hosted_events: fields.ReverseRelation["models.Event"]
+    form_responses: fields.ReverseRelation["models.FormResponse"]
+    reports: fields.ReverseRelation["models.Report"]
+    hides: fields.ReverseRelation["models.Hide"]
+    clubs: fields.ReverseRelation["models.Club"]
+    places: fields.ReverseRelation["models.Place"]
+    notifications: fields.ReverseRelation["models.Notifications"]
+
+    university: fields.ForeignKeyRelation["models.University"] = fields.ForeignKeyField(
         "models.University", related_name="students", null=True
     )
-    # TODO: Muti will add clubs field
-
-    def full_name(self) -> str:
-        if self.first_name or self.last_name:
-            return f"{self.first_name or ''} {self.last_name or ''}".strip()
-        return self.username
 
     @classmethod
     async def get_by_email(cls, email: str) -> Optional["User"]:
@@ -68,44 +71,36 @@ class User(BaseDBModel, BaseCreatedAtModel):
         await model.save()
         return model
 
-    class Meta:
-        table = "users"
-
-    class PydanticMeta:
-        computed = ["full_name"]
-
 
 class Connection(BaseDBModel):
+    class Meta:
+        table = "connections"
     is_accepted = fields.BooleanField(default=False)
-    from_user: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
+
+    from_user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
         "models.User", related_name="sent_connections"
     )
-    to_user: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
+    to_user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
         "models.User", related_name="received_connections"
     )
 
-    class Meta:
-        table = "connections"
-
 
 class Blocked(BaseDBModel):
-    blocking_user: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
+    class Meta:
+        table = "blocked"
+    blocking_user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
         "models.User"
     )
-    blocked_user: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
+    blocked_user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
         "models.User", related_name="blocked_users"
     )
 
-    class Meta:
-        table = "blocked"
 
-
-class University(BaseDBModel):
-    name = fields.CharField(max_length=255, unique=True)
-    location = fields.JSONField(null=True)
-    clubs: fields.ReverseRelation["Club"]
-    students: fields.ReverseRelation["User"]
-    events: fields.ReverseRelation["Event"]
-
+class University(BaseDBModel, LocationModel):
     class Meta:
         table = "universities"
+    name = fields.CharField(max_length=255, unique=True)
+
+    clubs: fields.ReverseRelation["models.Club"]
+    students: fields.ReverseRelation["models.User"]
+    events: fields.ReverseRelation["models.Event"]

@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
 from typing import Optional, Annotated
+
 from fastapi import HTTPException, Security, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
+
 from app.core.auth.schemas import JWTTokenPayload, CredentialsSchema
 from app.applications.users.models import User
 from app.core.auth.utils import password

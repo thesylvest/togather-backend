@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from app.applications.users.models import User
+from .models import User
 
 
 async def update_last_login(user_id: int) -> None:

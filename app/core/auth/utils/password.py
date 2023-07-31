@@ -1,6 +1,5 @@
 from passlib.context import CryptContext
 from typing import Tuple
-from passlib import pwd
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

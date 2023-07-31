@@ -1,12 +1,10 @@
-from fastapi import BackgroundTasks, APIRouter, Depends, HTTPException
+from fastapi import BackgroundTasks, APIRouter, Depends
 from typing import List
 
-from app.core.auth.utils.contrib import get_current_active_superuser, send_new_account_email, get_current_active_user
-from app.core.auth.utils.password import get_password_hash
+from app.core.auth.utils.contrib import get_current_active_superuser, get_current_active_user
 
-from app.applications.users.schemas import BaseUserOut, BaseUserCreate, BaseUserUpdate
-from app.applications.users.models import User
-from app.settings import config
+from .schemas import BaseUserOut, BaseUserCreate, BaseUserUpdate
+from .models import User
 
 router = APIRouter()
 

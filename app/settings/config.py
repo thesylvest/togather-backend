@@ -9,10 +9,13 @@ SERVER_HOST = 'localhost'
 
 DEBUG = True
 
+APPLICATIONS_MODULE = 'app.applications'
 APPLICATIONS = [
     'users',
     'events',
-    'posts'
+    'posts',
+    'interactions',
+    'organisations',
 ]
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
@@ -38,8 +41,6 @@ EMAIL_RESET_TOKEN_EXPIRE_HOURS = 1
 EMAILS_ENABLED = SMTP_HOST and SMTP_PORT and EMAILS_FROM_EMAIL
 
 LOGIN_URL = SERVER_HOST + '/api/auth/login/access-token'
-
-APPLICATIONS_MODULE = 'app.applications'
 
 CORS_ORIGINS = [
     "http://localhost",
