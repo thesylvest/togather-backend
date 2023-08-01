@@ -258,3 +258,4 @@ docker-stack.yml
 .vscode
 
 credentials.json
+migrations

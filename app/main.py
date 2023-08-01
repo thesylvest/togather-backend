@@ -7,9 +7,9 @@ import logging.config
 from app.core.exceptions import APIException, on_api_exception
 from app.settings import config
 
-from app.applications.users.routers import router as users_router
-from app.core.auth.routers import router as login_router
-from app.core.fcm.routers import router as fcm_router
+from app.applications.users.routes import router as users_router
+from app.core.auth.routes import router as login_router
+from app.core.fcm.routes import router as fcm_router
 
 logging.config.dictConfig(config.DEFAULT_LOGGING)
 
