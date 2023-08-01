@@ -1,7 +1,7 @@
 from tortoise import fields
 from enum import Enum
 
-from app.core.base.contenttype import ContentType
+from app.core.base.content_type import ContentType
 from app.core.base.models import (
     BaseCreatedAtModel,
     BaseDBModel,
