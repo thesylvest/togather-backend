@@ -54,5 +54,5 @@ register_tortoise(
 
 app.add_exception_handler(APIException, on_api_exception)
 app.include_router(login_router, prefix='/api/auth/login')
-app.include_router(users_router, prefix='/api/auth/users')
+app.include_router(users_router, prefix='/api/users')
 app.include_router(fcm_router, prefix='/api/fcm')
