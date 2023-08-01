@@ -5,6 +5,7 @@ services:
     build: .
     volumes:
       - ./init_script.sh:/init_script.sh
+      - ./app:/app/app
       - ./migrations:/app/migrations
     entrypoint: sh -c "/init_script.sh"
     restart: on-failure
