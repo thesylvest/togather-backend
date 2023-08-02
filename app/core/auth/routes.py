@@ -11,12 +11,13 @@ from app.core.auth.utils.jwt import create_access_token
 
 from app.applications.users.utils import update_last_login
 from app.applications.users.models import User
+from app.settings import config
 
 
 router = APIRouter()
 
 
-@router.post("/access-token", response_model=JWTToken, tags=["login"])
+@router.post("/access-token", response_model=JWTToken, tags=["auth"])
 async def login_access_token(credentials: CredentialsSchema):
     user = await authenticate(credentials)
     if user:
@@ -39,7 +40,7 @@ async def login_access_token(credentials: CredentialsSchema):
     }
 
 
-@router.post("/password-recovery/{email}", tags=["login"], response_model=Msg)
+@router.post("/password-recovery/{email}", tags=["auth"], response_model=Msg)
 async def recover_password(email: str, background_tasks: BackgroundTasks):
     """
     Password Recovery
@@ -52,16 +53,17 @@ async def recover_password(email: str, background_tasks: BackgroundTasks):
             detail="The user with this username does not exist in the system.",
         )
     password_reset_token = generate_password_reset_token(email=email)
-    # TODO background_tasks.add_task(
-    #     send_reset_password_email,
-    #     email_to=user.email,
-    #     email=email,
-    #     token=password_reset_token,
-    # )
+    if config.EMAILS_ENABLED:
+        background_tasks.add_task(
+            send_reset_password_email,
+            email_to=user.email,
+            email=email,
+            token=password_reset_token,
+        )
     return {"msg": "Password recovery email sent"}
 
 
-@router.post("/reset-password/", tags=["login"], response_model=Msg)
+@router.post("/reset-password/", tags=["auth"], response_model=Msg)
 async def reset_password(token: str = Body(...), new_password: str = Body(...)):
     """
     Reset password
@@ -87,3 +89,43 @@ async def reset_password(token: str = Body(...), new_password: str = Body(...)):
     user.password_hash = hashed_password
     await user.save()
     return {"msg": "Password updated successfully"}
+
+
+@router.post("/register", response_model=JWTToken, tags=["auth"])
+async def register_user(user_in: CredentialsSchema, background_tasks: BackgroundTasks):
+    user = await User.get_by_email(email=user_in.email)
+    if user:
+        raise HTTPException(
+            status_code=400,
+            detail="A user with this email already exists in the system.",
+        )
+
+    user = await User.get_by_username(username=user_in.username)
+    if user:
+        raise HTTPException(
+            status_code=400,
+            detail="A user with this username already exists in the system.",
+        )
+
+    hashed_password = get_password_hash(user_in.password)
+    db_user = CredentialsSchema(**user_in.to_dict(), password_hash=hashed_password)
+    created_user = await User.create(db_user)
+
+    if created_user:
+        if config.EMAILS_ENABLED and user_in.email:
+            background_tasks.add_task(
+                send_new_account_email,
+                email_to=user_in.email,
+                username=user_in.email,
+                password=user_in.password,
+            )
+
+        return {
+            "access_token": create_access_token(data={"user_id": created_user.id}),
+            "token_type": "bearer",
+        }
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail="Error creating user.",
+        )
