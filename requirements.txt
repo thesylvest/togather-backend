@@ -8,3 +8,8 @@ python-jose==3.3.0
 tortoise-orm==0.19.3
 uvicorn==0.23.1
 firebase-admin==6.2.0
+google-api-python-client==2.95.0
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+requests

@@ -10,6 +10,9 @@ from app.applications.users.models import User
 from app.core.auth.utils import password
 from app.settings import config
 
+from google.oauth2 import id_token
+from google.auth.transport import requests
+
 password_reset_jwt_subject = "passwordreset"
 reusable_oauth2 = OAuth2PasswordBearer(tokenUrl="/api/auth/access-token")
 
@@ -105,3 +108,12 @@ async def authenticate(credentials: CredentialsSchema) -> Optional[User]:
         await user.save()
 
     return user
+
+def decode_google_token(token):
+    try:
+        # Verify and decode the Google ID token
+        id_info = id_token.verify_oauth2_token(token, requests.Request())
+        return id_info
+    except ValueError as e:
+        print("Error decoding Google token:", e)
+        return None

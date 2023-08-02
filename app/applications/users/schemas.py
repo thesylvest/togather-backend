@@ -48,7 +48,7 @@ class BaseUserDB(BaseUser):
     last_login: Optional[datetime]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class BaseUserOut(BaseUser):
@@ -57,4 +57,4 @@ class BaseUserOut(BaseUser):
     email: EmailStr
 
     class Config:
-        orm_mode = True
+        from_attributes = True
