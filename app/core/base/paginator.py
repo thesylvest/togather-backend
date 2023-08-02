@@ -25,7 +25,7 @@ async def paginate(
 ) -> Dict[str, Any]:
     if page < 1:
         raise HTTPException(status_code=400, detail="Invalid page number")
-    total = len(await queryset)
+    total = await queryset.count()
     offset = (page - 1) * page_size
 
     page_data = []
