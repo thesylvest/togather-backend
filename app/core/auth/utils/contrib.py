@@ -11,7 +11,7 @@ from app.core.auth.utils import password
 from app.settings import config
 
 password_reset_jwt_subject = "passwordreset"
-reusable_oauth2 = OAuth2PasswordBearer(tokenUrl="/api/auth/login/access-token")
+reusable_oauth2 = OAuth2PasswordBearer(tokenUrl="/api/auth/access-token")
 
 
 def generate_password_reset_token(email):
