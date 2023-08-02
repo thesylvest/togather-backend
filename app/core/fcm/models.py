@@ -19,5 +19,5 @@ class FCMDevice(BaseDBModel, BaseCreatedAtModel):
     device_type = fields.CharEnumField(enum_type=DeviceType, max_length=10)
 
     user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
-        "models.User", related_name="devices", on_delete=fields.base.CASCADE
+        "models.User", related_name="devices", on_delete=fields.base.CASCADE, null=True
     )

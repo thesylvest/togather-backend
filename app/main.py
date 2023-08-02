@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 import logging.config
 
-from app.core.exceptions import APIException, on_api_exception
+from app.core.base.exceptions import APIException, on_api_exception
 from app.settings import config
 
 from app.applications.users.routes import router as users_router
