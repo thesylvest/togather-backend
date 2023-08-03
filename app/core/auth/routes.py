@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Body, HTTPException, BackgroundTasks, status, Request
+from typing import Annotated
+from fastapi import APIRouter, Body, HTTPException, BackgroundTasks, status, Request, Depends
+from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.auth.utils.contrib import (
     generate_password_reset_token,
     verify_password_reset_token,
     authenticate,
     decode_google_token,
+    oauth2_scheme
 )
 from app.core.auth.schemas import JWTToken, CredentialsSchema, Msg
 from app.core.auth.utils.password import get_password_hash
@@ -20,7 +23,9 @@ router = APIRouter()
 
 
 @router.post("/access-token", response_model=JWTToken, tags=["auth"])
-async def login_access_token(credentials: CredentialsSchema):
+async def login_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    user = await User.get_by_username(username=form_data.username)
+    credentials = CredentialsSchema(username=form_data.username, password=form_data.password, email=user.email)
     user = await authenticate(credentials)
     if user:
         await update_last_login(user.id)
@@ -36,7 +41,7 @@ async def login_access_token(credentials: CredentialsSchema):
 
     return {
         "access_token": create_access_token(
-            data={"user_id": user.id},
+            data={"user_id": user.id, "username": user.username, "email": user.email},
         ),
         "token_type": "bearer",
     }
