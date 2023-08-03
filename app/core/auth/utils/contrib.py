@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta
 from typing import Optional, Annotated
 
-from fastapi import HTTPException, Security, status, Depends
+from fastapi import HTTPException, Security, status, Depends, Body
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 
-from app.core.auth.schemas import JWTTokenPayload, CredentialsSchema
+from app.core.auth.schemas import JWTTokenPayload, CredentialsSchema, JWTTokenData, JWTToken
 from app.applications.users.models import User
 from app.core.auth.utils import password
 from app.settings import config
@@ -14,7 +14,7 @@ from google.oauth2 import id_token
 from google.auth.transport import requests
 
 password_reset_jwt_subject = "passwordreset"
-reusable_oauth2 = OAuth2PasswordBearer(tokenUrl="/api/auth/access-token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/access-token")
 
 
 def generate_password_reset_token(email):
@@ -42,7 +42,7 @@ def verify_password_reset_token(token) -> Optional[str]:
         return None
 
 
-async def get_current_user(token: Annotated[str, Depends(reusable_oauth2)]):
+async def get_current_user(token: str = Security(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -50,29 +50,24 @@ async def get_current_user(token: Annotated[str, Depends(reusable_oauth2)]):
     )
 
     try:
-        payload = jwt.decode(
-            token, config.SECRET_KEY, algorithms=[config.JWT_ALGORITHM]
-        )
-        username: str = payload.get("sub")
-
+        payload = jwt.decode(token, config.SECRET_KEY, algorithms=[config.JWT_ALGORITHM])
+        username: str = payload.get("username")
         if username is None:
             raise credentials_exception
-        token_data = JWTTokenPayload(**payload)
+        token_data = JWTTokenData(username=username)
     except JWTError:
         raise credentials_exception
-
     user = await User.get_by_username(username=token_data.username)
-
     if user is None:
         raise credentials_exception
     return user
 
 
-async def get_current_active_user(current_user: User = Security(get_current_user)):
-    if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
-        )
+async def get_current_active_user(
+    current_user: Annotated[User, Depends(get_current_user)]
+):
+    if current_user.disabled:
+        raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
 
