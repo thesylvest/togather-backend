@@ -25,7 +25,7 @@ class Post(BaseDBModel, BaseCreatedUpdatedAtModel, LocationModel):
     )
 
 
-class Comment(BaseDBModel, BaseCreatedUpdatedAtModel, LocationModel):
+class Comment(BaseDBModel, BaseCreatedUpdatedAtModel):
     class Meta:
         table = "comments"
     is_anon = fields.BooleanField(default=False)
