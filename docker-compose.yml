@@ -5,6 +5,7 @@ services:
     build: .
     volumes:
       - ./init_script.sh:/init_script.sh
+      - ./app:/app/app
       - ./migrations:/app/migrations
     entrypoint: sh -c "/init_script.sh"
     restart: on-failure
@@ -15,6 +16,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/main
+      OAUTHLIB_INSECURE_TRANSPORT: 1
 
   db:
     image: postgres:14-alpine

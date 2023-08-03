@@ -8,6 +8,9 @@ class CredentialsSchema(BaseModel):
     email: Optional[str]
     password: str
 
+    def to_dict(self):
+        return self.dict(exclude_unset=True)
+
 
 class JWTToken(BaseModel):
     access_token: str

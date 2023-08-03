@@ -259,3 +259,4 @@ docker-stack.yml
 
 credentials.json
 migrations
+client_secret.json

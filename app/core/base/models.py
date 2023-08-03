@@ -25,5 +25,5 @@ class BaseCreatedUpdatedAtModel:
 
 
 class LocationModel:
-    latitude = fields.DecimalField(max_digits=9, decimal_places=6)
-    longitude = fields.DecimalField(max_digits=9, decimal_places=6)
+    latitude = fields.DecimalField(max_digits=9, decimal_places=6, null=True)
+    longitude = fields.DecimalField(max_digits=9, decimal_places=6, null=True)

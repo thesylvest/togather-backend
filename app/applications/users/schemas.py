@@ -1,15 +1,10 @@
 from datetime import datetime
 from typing import Optional
-import uuid
 
-from pydantic import BaseModel, EmailStr, UUID4, validator
+from pydantic import BaseModel, EmailStr, validator
 
 
 class BaseProperties(BaseModel):
-    @validator("hashed_id", pre=True, always=True, check_fields=False)
-    def default_hashed_id(cls, v):
-        return v or uuid.uuid4()
-
     def create_update_dict(self):
         return self.dict(
             exclude_unset=True,
@@ -23,7 +18,6 @@ class BaseProperties(BaseModel):
 class BaseUser(BaseProperties):
     first_name: Optional[str]
     last_name: Optional[str]
-    hashed_id: Optional[UUID4] = None
     email: Optional[EmailStr] = None
     username: Optional[str] = None
     is_active: Optional[bool] = True
@@ -34,7 +28,6 @@ class BaseUser(BaseProperties):
 class BaseUserCreate(BaseProperties):
     first_name: Optional[str]
     last_name: Optional[str]
-    hashed_id: Optional[UUID4] = None
     email: EmailStr
     username: Optional[str]
     password: str
@@ -50,17 +43,18 @@ class BaseUserUpdate(BaseProperties):
 
 class BaseUserDB(BaseUser):
     id: int
-    hashed_id: UUID4
     password_hash: str
     updated_at: datetime
     last_login: Optional[datetime]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class BaseUserOut(BaseUser):
     id: int
+    username: str
+    email: EmailStr
 
     class Config:
-        orm_mode = True
+        from_attributes = True

@@ -25,13 +25,12 @@ class Post(BaseDBModel, BaseCreatedUpdatedAtModel, LocationModel):
     )
 
 
-class Comment(BaseDBModel, BaseCreatedUpdatedAtModel):
+class Comment(BaseDBModel, BaseCreatedUpdatedAtModel, LocationModel):
     class Meta:
         table = "comments"
     is_anon = fields.BooleanField(default=False)
     content = fields.TextField()
     media = fields.CharField(max_length=255, null=True)
-    location = fields.JSONField(null=True)
 
     comments: fields.ReverseRelation["models.Comment"]
 
