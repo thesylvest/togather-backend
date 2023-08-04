@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr, validator
+# from app.core.base.schemas import ItemModel
 
 
 class BaseProperties(BaseModel):
@@ -71,5 +72,9 @@ class BaseUserOut(BaseUser):
     class Config:
         from_attributes = True
 
-    def allowed_actions(item, user):
-        return ["oh yeah", "baby", str(user is None)]
+    @classmethod
+    def allowed_actions(cls):
+        return {
+            "GET": cls.__fields__.keys(),
+            "PUT": cls.__fields__.keys(),
+        }
