@@ -1,8 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, validator
-# from app.core.base.schemas import ItemModel
+from pydantic import BaseModel, EmailStr
 
 
 class BaseProperties(BaseModel):
@@ -71,7 +70,7 @@ class BaseUserOut(BaseUser):
 
     class Config:
         from_attributes = True
-
+        
     @classmethod
     def allowed_actions(cls):
         return {
