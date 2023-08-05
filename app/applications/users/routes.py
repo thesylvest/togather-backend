@@ -110,15 +110,15 @@ def read_user_me(
     return user_out
 
 
-@router.get("/{username}", response_model=BaseUserOut, status_code=200, tags=["users"])
+@router.get("/{user_id}", response_model=BaseUserOut, status_code=200, tags=["users"])
 async def read_user_by_id(
-    username: str,
+    user_id: int,
     current_user: User = Depends(get_current_active_user),
 ):
     """
     Get a specific user's info by username.
     """
-    user = await User.get_by_username(username=username)
+    user = await User.get_or_none(id=user_id)
     if user == current_user:
         return user
     if not current_user.is_superuser:
@@ -128,16 +128,16 @@ async def read_user_by_id(
     return user
 
 
-@router.put("/{username}", response_model=BaseUserOut, status_code=200, tags=["users"])
+@router.put("/{user_id}", response_model=BaseUserOut, status_code=200, tags=["users"])
 async def update_user(
-    username: str,
+    user_id: int,
     user_in: BaseUserUpdate,
     current_user: User = Depends(get_current_active_superuser),
 ):
     """
     Update a user.
     """
-    user = await User.get_by_username(username=username)
+    user = await User.get_or_none(id=user_id)
     if not user:
         raise HTTPException(
             status_code=404,
@@ -149,19 +149,19 @@ async def update_user(
 
 
 @router.get(
-    "/{username}/connections",
+    "/{user_id}/connections",
     response_model=List[BaseUserOut],
     status_code=200,
     tags=["users"],
 )
 async def get_user_connections(
-    username: str,
+    user_id: int,
     current_user: User = Depends(get_current_active_user),
 ):
     """
     Get a specific user's connections by username.
     """
-    user = await User.get_or_none(username=username)
+    user = await User.get_or_none(id=user_id)
     if not user:
         raise HTTPException(
             status_code=404,
@@ -231,6 +231,40 @@ async def get_user_received_connections(
                 created_at=connection.from_user.created_at,
                 first_name=connection.from_user.first_name,
                 last_name=connection.from_user.last_name,
+            )
+        )
+
+    return out
+
+
+@router.get(
+    "/me/connections/sent",
+    response_model=List[BaseUserOut],
+    status_code=200,
+    tags=["users"],
+)
+async def get_user_sent_connections(
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get current user's waiting sent connections
+    """
+
+    await current_user.fetch_related("sent_connections")
+    sent = await current_user.sent_connections.filter(
+        is_accepted=False
+    ).prefetch_related("to_user")
+
+    out = []
+    for connection in sent:
+        out.append(
+            BaseUserOut(
+                id=connection.to_user.id,
+                username=connection.to_user.username,
+                email=connection.to_user.email,
+                created_at=connection.to_user.created_at,
+                first_name=connection.to_user.first_name,
+                last_name=connection.to_user.last_name,
             )
         )
 
