@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr, validator
+# from app.core.base.schemas import ItemModel
 
 
 class BaseProperties(BaseModel):
@@ -34,11 +35,15 @@ class BaseUserCreate(BaseProperties):
 
 
 class BaseUserUpdate(BaseProperties):
-    first_name: Optional[str]
-    last_name: Optional[str]
-    password: Optional[str]
-    email: Optional[EmailStr]
-    username: Optional[str]
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    password: Optional[str] = None
+    email: Optional[EmailStr] = None
+    username: Optional[str] = None
+    bio: Optional[str] = None
+    gender: Optional[str] = None
+    social_links: Optional[str] = None
+    birth_date: Optional[str] = None
 
 
 class BaseUserDB(BaseUser):
@@ -55,6 +60,21 @@ class BaseUserOut(BaseUser):
     id: int
     username: str
     email: EmailStr
+    created_at: datetime
+    last_login: Optional[datetime] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    bio: Optional[str] = None
+    gender: Optional[str] = None
+    social_links: Optional[dict] = None
+    birth_date: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
+    @classmethod
+    def allowed_actions(cls):
+        return {
+            "GET": cls.__fields__.keys(),
+            "PUT": cls.__fields__.keys(),
+        }

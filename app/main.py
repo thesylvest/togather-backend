@@ -10,6 +10,7 @@ from app.settings import config
 from app.applications.users.routes import router as users_router
 from app.core.auth.routes import router as auth_router
 from app.core.fcm.routes import router as fcm_router
+from app.applications.events.routes import router as events_router
 
 logging.config.dictConfig(config.DEFAULT_LOGGING)
 
@@ -56,3 +57,4 @@ app.add_exception_handler(APIException, on_api_exception)
 app.include_router(auth_router, prefix='/api/auth')
 app.include_router(users_router, prefix='/api/users')
 app.include_router(fcm_router, prefix='/api/fcm')
+app.include_router(events_router, prefix='/api/events')

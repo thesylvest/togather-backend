@@ -1,4 +1,5 @@
-from fastapi import BackgroundTasks, APIRouter, Depends, HTTPException
+import json
+from fastapi import BackgroundTasks, APIRouter, Depends, HTTPException, Request, Query
 from typing import List
 
 from app.core.auth.utils.contrib import (
@@ -6,6 +7,7 @@ from app.core.auth.utils.contrib import (
     get_current_active_user,
 )
 from app.core.auth.utils.password import get_password_hash
+from app.core.base.paginator import paginate
 from .schemas import BaseUserOut, BaseUserCreate, BaseUserUpdate
 from .models import User
 from app.settings import config
@@ -13,17 +15,18 @@ from app.settings import config
 router = APIRouter()
 
 
-@router.get("/", response_model=List[BaseUserOut], status_code=200, tags=["users"])
+@router.get("/", status_code=200, tags=["users"])
 async def read_users(
-    skip: int = 0,
-    limit: int = 100,
+    request: Request,
+    page: int = Query(1, ge=1, title="Page number"),
+    page_size: int = Query(10, ge=1, le=100, title="Page size"),
     current_user: User = Depends(get_current_active_superuser),
 ):
     """
     Retrieve users.
     """
-    users = await User.all().limit(limit).offset(skip)
-    return users
+    users = User.all()
+    return await paginate(users, page, page_size, request, BaseUserOut, None)
 
 
 @router.post("/", response_model=BaseUserOut, status_code=201, tags=["users"])
@@ -74,15 +77,14 @@ async def update_user_me(
     """
     Update own user.
     """
-    if user_in.password is not None:
-        hashed_password = get_password_hash(user_in.password)
-        current_user.password_hash = hashed_password
-    if user_in.username is not None:
-        current_user.username = user_in.username
-    if user_in.email is not None:
-        current_user.email = user_in.email
-    await current_user.save()
-    return current_user
+    user = current_user
+
+    for field, value in user_in.create_update_dict().items():
+        if value is not None:
+            setattr(user, field, value)
+
+    await user.save()
+    return user
 
 
 @router.get("/me", response_model=BaseUserOut, status_code=200, tags=["users"])
@@ -90,20 +92,33 @@ def read_user_me(
     current_user: User = Depends(get_current_active_user),
 ):
     """
-    Get current user.
+    Get current user's info.
     """
-    return current_user
+    user_out = BaseUserOut(
+        id=current_user.id,
+        username=current_user.username,
+        email=current_user.email,
+        created_at=current_user.created_at,
+        last_login=current_user.last_login,
+        first_name=current_user.first_name,
+        last_name=current_user.last_name,
+        bio=current_user.bio,
+        gender=current_user.gender,
+        social_links=current_user.social_links,
+        birth_date=current_user.birth_date,
+    )
+    return user_out
 
 
-@router.get("/{user_id}", response_model=BaseUserOut, status_code=200, tags=["users"])
+@router.get("/{username}", response_model=BaseUserOut, status_code=200, tags=["users"])
 async def read_user_by_id(
-    user_id: int,
+    username: str,
     current_user: User = Depends(get_current_active_user),
 ):
     """
-    Get a specific user by id.
+    Get a specific user's info by username.
     """
-    user = await User.get(id=user_id)
+    user = await User.get_by_username(username=username)
     if user == current_user:
         return user
     if not current_user.is_superuser:
@@ -113,16 +128,16 @@ async def read_user_by_id(
     return user
 
 
-@router.put("/{user_id}", response_model=BaseUserOut, status_code=200, tags=["users"])
+@router.put("/{username}", response_model=BaseUserOut, status_code=200, tags=["users"])
 async def update_user(
-    user_id: int,
+    username: str,
     user_in: BaseUserUpdate,
     current_user: User = Depends(get_current_active_superuser),
 ):
     """
     Update a user.
     """
-    user = await User.get(id=user_id)
+    user = await User.get_by_username(username=username)
     if not user:
         raise HTTPException(
             status_code=404,
