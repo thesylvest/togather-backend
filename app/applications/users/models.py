@@ -73,6 +73,7 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
         return model
 
 
+
 class Connection(BaseDBModel):
     class Meta:
         table = "connections"
@@ -84,6 +85,7 @@ class Connection(BaseDBModel):
     to_user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
         "models.User", related_name="received_connections"
     )
+
 
 
 class Blocked(BaseDBModel):

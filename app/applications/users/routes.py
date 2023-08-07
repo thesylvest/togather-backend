@@ -1,4 +1,3 @@
-import json
 from fastapi import BackgroundTasks, APIRouter, Depends, HTTPException, Request, Query
 from typing import List
 
@@ -9,7 +8,8 @@ from app.core.auth.utils.contrib import (
 from app.core.auth.utils.password import get_password_hash
 from app.core.base.paginator import paginate
 from .schemas import BaseUserOut, BaseUserCreate, BaseUserUpdate
-from .models import User
+from app.applications.events.schemas import BaseEventOut
+from .models import User, Connection
 from app.settings import config
 
 router = APIRouter()
@@ -110,15 +110,15 @@ def read_user_me(
     return user_out
 
 
-@router.get("/{username}", response_model=BaseUserOut, status_code=200, tags=["users"])
+@router.get("/{user_id}", response_model=BaseUserOut, status_code=200, tags=["users"])
 async def read_user_by_id(
-    username: str,
+    user_id: int,
     current_user: User = Depends(get_current_active_user),
 ):
     """
     Get a specific user's info by username.
     """
-    user = await User.get_by_username(username=username)
+    user = await User.get_or_none(id=user_id)
     if user == current_user:
         return user
     if not current_user.is_superuser:
@@ -128,16 +128,16 @@ async def read_user_by_id(
     return user
 
 
-@router.put("/{username}", response_model=BaseUserOut, status_code=200, tags=["users"])
+@router.put("/{user_id}", response_model=BaseUserOut, status_code=200, tags=["users"])
 async def update_user(
-    username: str,
+    user_id: int,
     user_in: BaseUserUpdate,
     current_user: User = Depends(get_current_active_superuser),
 ):
     """
     Update a user.
     """
-    user = await User.get_by_username(username=username)
+    user = await User.get_or_none(id=user_id)
     if not user:
         raise HTTPException(
             status_code=404,
@@ -146,3 +146,158 @@ async def update_user(
     user = await user.update_from_dict(user_in.create_update_dict_superuser())
     await user.save()
     return user
+
+
+@router.get(
+    "/{user_id}/connections",
+    response_model=List[BaseUserOut],
+    status_code=200,
+    tags=["users"],
+)
+async def get_user_connections(
+    user_id: int,
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get a specific user's connections by username.
+    """
+    user = await User.get_or_none(id=user_id)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="The user with this username does not exist in the system",
+        )
+
+    await user.fetch_related("sent_connections", "received_connections")
+    sent = await user.sent_connections.filter(is_accepted=True).prefetch_related(
+        "to_user"
+    )
+    received = await user.received_connections.filter(
+        is_accepted=True
+    ).prefetch_related("from_user")
+
+    out = []
+    for connection in sent:
+        out.append(
+            BaseUserOut(
+                id=connection.to_user.id,
+                username=connection.to_user.username,
+                email=connection.to_user.email,
+                created_at=connection.to_user.created_at,
+                first_name=connection.to_user.first_name,
+                last_name=connection.to_user.last_name,
+            )
+        )
+    for connection in received:
+        out.append(
+            BaseUserOut(
+                id=connection.from_user.id,
+                username=connection.from_user.username,
+                email=connection.from_user.email,
+                created_at=connection.from_user.created_at,
+                first_name=connection.from_user.first_name,
+                last_name=connection.from_user.last_name,
+            )
+        )
+
+    return out
+
+
+@router.get(
+    "/me/connections/received",
+    response_model=List[BaseUserOut],
+    status_code=200,
+    tags=["users"],
+)
+async def get_user_received_connections(
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get current user's waiting received connections
+    """
+
+    await current_user.fetch_related("received_connections")
+    received = await current_user.received_connections.filter(
+        is_accepted=False
+    ).prefetch_related("from_user")
+
+    out = []
+    for connection in received:
+        out.append(
+            BaseUserOut(
+                id=connection.from_user.id,
+                username=connection.from_user.username,
+                email=connection.from_user.email,
+                created_at=connection.from_user.created_at,
+                first_name=connection.from_user.first_name,
+                last_name=connection.from_user.last_name,
+            )
+        )
+
+    return out
+
+
+@router.get(
+    "/me/connections/sent",
+    response_model=List[BaseUserOut],
+    status_code=200,
+    tags=["users"],
+)
+async def get_user_sent_connections(
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get current user's waiting sent connections
+    """
+
+    await current_user.fetch_related("sent_connections")
+    sent = await current_user.sent_connections.filter(
+        is_accepted=False
+    ).prefetch_related("to_user")
+
+    out = []
+    for connection in sent:
+        out.append(
+            BaseUserOut(
+                id=connection.to_user.id,
+                username=connection.to_user.username,
+                email=connection.to_user.email,
+                created_at=connection.to_user.created_at,
+                first_name=connection.to_user.first_name,
+                last_name=connection.to_user.last_name,
+            )
+        )
+
+    return out
+
+
+@router.get(
+    "/me/events",
+    response_model=List[BaseEventOut],
+    status_code=200,
+    tags=["users", "events"],
+)
+async def get_user_events(
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get current user's events
+    """
+
+    await current_user.fetch_related("hosted_events")
+    events = await current_user.hosted_events.order_by("-start_date")
+
+    out = []
+    for event in events:
+        out.append(
+            BaseEventOut(
+                id=event.id,
+                name=event.name,
+                description=event.description,
+                start_date=event.start_date,
+                end_date=event.end_date,
+                rate=event.rate,
+            )
+        )
+
+    return out
