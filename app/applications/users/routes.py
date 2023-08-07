@@ -1,14 +1,14 @@
 from fastapi import BackgroundTasks, APIRouter, Depends, HTTPException, Request, Query
-from typing import List
+from tortoise.expressions import Q, Subquery
 
 from app.core.auth.utils.contrib import (
     get_current_active_superuser,
     get_current_active_user,
 )
 from app.core.auth.utils.password import get_password_hash
+from .schemas import UserOut, UserCreate, UserUpdate
+from app.applications.events.schemas import EventOut
 from app.core.base.paginator import paginate
-from .schemas import BaseUserOut, BaseUserCreate, BaseUserUpdate
-from app.applications.events.schemas import BaseEventOut
 from .models import User, Connection
 from app.settings import config
 
@@ -20,19 +20,19 @@ async def read_users(
     request: Request,
     page: int = Query(1, ge=1, title="Page number"),
     page_size: int = Query(10, ge=1, le=100, title="Page size"),
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Retrieve users.
     """
     users = User.all()
-    return await paginate(users, page, page_size, request, BaseUserOut, None)
+    return await paginate(users, page, page_size, request, UserOut, current_user)
 
 
-@router.post("/", response_model=BaseUserOut, status_code=201, tags=["users"])
+@router.post("/", response_model=UserOut, status_code=201, tags=["users"])
 async def create_user(
     *,
-    user_in: BaseUserCreate,
+    user_in: UserCreate,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_superuser),
 ):
@@ -55,7 +55,7 @@ async def create_user(
             )
 
     hashed_password = get_password_hash(user_in.password)
-    db_user = BaseUserCreate(
+    db_user = UserCreate(
         **user_in.create_update_dict(), password_hash=hashed_password
     )
     created_user = await User.create(db_user)
@@ -70,9 +70,9 @@ async def create_user(
     return created_user
 
 
-@router.put("/me", response_model=BaseUserOut, status_code=200, tags=["users"])
+@router.put("/me", response_model=UserOut, status_code=200, tags=["users"])
 async def update_user_me(
-    user_in: BaseUserUpdate, current_user: User = Depends(get_current_active_user)
+    user_in: UserUpdate, current_user: User = Depends(get_current_active_user)
 ):
     """
     Update own user.
@@ -87,30 +87,17 @@ async def update_user_me(
     return user
 
 
-@router.get("/me", response_model=BaseUserOut, status_code=200, tags=["users"])
+@router.get("/me", response_model=UserOut, status_code=200, tags=["users"])
 def read_user_me(
     current_user: User = Depends(get_current_active_user),
 ):
     """
     Get current user's info.
     """
-    user_out = BaseUserOut(
-        id=current_user.id,
-        username=current_user.username,
-        email=current_user.email,
-        created_at=current_user.created_at,
-        last_login=current_user.last_login,
-        first_name=current_user.first_name,
-        last_name=current_user.last_name,
-        bio=current_user.bio,
-        gender=current_user.gender,
-        social_links=current_user.social_links,
-        birth_date=current_user.birth_date,
-    )
-    return user_out
+    return UserOut.serialize(current_user, current_user)
 
 
-@router.get("/{user_id}", response_model=BaseUserOut, status_code=200, tags=["users"])
+@router.get("/{user_id}", status_code=200, tags=["users"])
 async def read_user_by_id(
     user_id: int,
     current_user: User = Depends(get_current_active_user),
@@ -119,19 +106,18 @@ async def read_user_by_id(
     Get a specific user's info by username.
     """
     user = await User.get_or_none(id=user_id)
-    if user == current_user:
-        return user
-    if not current_user.is_superuser:
+    if not user:
         raise HTTPException(
-            status_code=400, detail="The user doesn't have enough privileges"
+            status_code=404,
+            detail="The user with this id does not exist in the system",
         )
-    return user
+    return UserOut.serialize(user, current_user)
 
 
-@router.put("/{user_id}", response_model=BaseUserOut, status_code=200, tags=["users"])
+@router.put("/{user_id}", response_model=UserOut, status_code=200, tags=["users"])
 async def update_user(
     user_id: int,
-    user_in: BaseUserUpdate,
+    user_in: UserUpdate,
     current_user: User = Depends(get_current_active_superuser),
 ):
     """
@@ -150,16 +136,18 @@ async def update_user(
 
 @router.get(
     "/{user_id}/connections",
-    response_model=List[BaseUserOut],
     status_code=200,
     tags=["users"],
 )
 async def get_user_connections(
     user_id: int,
+    request: Request,
+    page: int = Query(1, ge=1, title="Page number"),
+    page_size: int = Query(10, ge=1, le=100, title="Page size"),
     current_user: User = Depends(get_current_active_user),
 ):
     """
-    Get a specific user's connections by username.
+    Get a specific user's connections by user ID.
     """
     user = await User.get_or_none(id=user_id)
     if not user:
@@ -168,136 +156,91 @@ async def get_user_connections(
             detail="The user with this username does not exist in the system",
         )
 
-    await user.fetch_related("sent_connections", "received_connections")
-    sent = await user.sent_connections.filter(is_accepted=True).prefetch_related(
-        "to_user"
+    connections = User.filter(
+        Q(id__in=Subquery(Connection.filter(is_accepted=True, from_user=user).values('to_user_id'))) |
+        Q(id__in=Subquery(Connection.filter(is_accepted=True, to_user=user).values('from_user_id')))
     )
-    received = await user.received_connections.filter(
-        is_accepted=True
-    ).prefetch_related("from_user")
 
-    out = []
-    for connection in sent:
-        out.append(
-            BaseUserOut(
-                id=connection.to_user.id,
-                username=connection.to_user.username,
-                email=connection.to_user.email,
-                created_at=connection.to_user.created_at,
-                first_name=connection.to_user.first_name,
-                last_name=connection.to_user.last_name,
-            )
-        )
-    for connection in received:
-        out.append(
-            BaseUserOut(
-                id=connection.from_user.id,
-                username=connection.from_user.username,
-                email=connection.from_user.email,
-                created_at=connection.from_user.created_at,
-                first_name=connection.from_user.first_name,
-                last_name=connection.from_user.last_name,
-            )
-        )
+    return await paginate(connections, page, page_size, request, UserOut, current_user)
 
-    return out
+
+@router.post(
+    "/{user_id}/connections",
+    status_code=200,
+    tags=["users"],
+)
+async def user_connect(
+    user_id: int,
+    current_user: User = Depends(get_current_active_user),
+):
+    user = await User.get_or_none(id=user_id)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="The user with this username does not exist in the system",
+        )
+    if user == current_user:
+        raise HTTPException(
+            status_code=403,
+            detail="Can't connect with self",
+        )
+    await Connection.create(from_user=current_user, to_user=user, is_accepted=False)
+    return "Connection request sent"
 
 
 @router.get(
     "/me/connections/received",
-    response_model=List[BaseUserOut],
     status_code=200,
     tags=["users"],
 )
 async def get_user_received_connections(
+    request: Request,
+    page: int = Query(1, ge=1, title="Page number"),
+    page_size: int = Query(10, ge=1, le=100, title="Page size"),
     current_user: User = Depends(get_current_active_user),
 ):
     """
     Get current user's waiting received connections
     """
-
-    await current_user.fetch_related("received_connections")
-    received = await current_user.received_connections.filter(
+    received = current_user.received_connections.filter(
         is_accepted=False
     ).prefetch_related("from_user")
-
-    out = []
-    for connection in received:
-        out.append(
-            BaseUserOut(
-                id=connection.from_user.id,
-                username=connection.from_user.username,
-                email=connection.from_user.email,
-                created_at=connection.from_user.created_at,
-                first_name=connection.from_user.first_name,
-                last_name=connection.from_user.last_name,
-            )
-        )
-
-    return out
+    return paginate(received, page, page_size, request, UserOut, current_user)
 
 
 @router.get(
     "/me/connections/sent",
-    response_model=List[BaseUserOut],
     status_code=200,
     tags=["users"],
 )
 async def get_user_sent_connections(
+    request: Request,
+    page: int = Query(1, ge=1, title="Page number"),
+    page_size: int = Query(10, ge=1, le=100, title="Page size"),
     current_user: User = Depends(get_current_active_user),
 ):
     """
     Get current user's waiting sent connections
     """
-
-    await current_user.fetch_related("sent_connections")
-    sent = await current_user.sent_connections.filter(
+    sent = current_user.sent_connections.filter(
         is_accepted=False
     ).prefetch_related("to_user")
-
-    out = []
-    for connection in sent:
-        out.append(
-            BaseUserOut(
-                id=connection.to_user.id,
-                username=connection.to_user.username,
-                email=connection.to_user.email,
-                created_at=connection.to_user.created_at,
-                first_name=connection.to_user.first_name,
-                last_name=connection.to_user.last_name,
-            )
-        )
-
-    return out
+    return paginate(sent, page, page_size, request, UserOut, current_user)
 
 
 @router.get(
     "/me/events",
-    response_model=List[BaseEventOut],
     status_code=200,
     tags=["users", "events"],
 )
 async def get_user_events(
+    request: Request,
+    page: int = Query(1, ge=1, title="Page number"),
+    page_size: int = Query(10, ge=1, le=100, title="Page size"),
     current_user: User = Depends(get_current_active_user),
 ):
     """
     Get current user's events
     """
-
-    await current_user.fetch_related("hosted_events")
-    events = await current_user.hosted_events.order_by("-start_date")
-
-    out = []
-    for event in events:
-        out.append(
-            BaseEventOut(
-                id=event.id,
-                name=event.name,
-                description=event.description,
-                start_date=event.start_date,
-                end_date=event.end_date,
-                rate=event.rate,
-            )
-        )
-
-    return out
+    events = current_user.hosted_events.order_by("-start_date")
+    return paginate(events, page, page_size, request, EventOut, current_user)

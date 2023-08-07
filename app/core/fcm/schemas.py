@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from app.core.base.schemas import ItemModel
+from app.core.base.schemas import BaseOutModel
 
 
 class RegisterDeviceIn(BaseModel):
@@ -15,8 +15,12 @@ class RegisterDeviceOut(BaseModel):
     created: bool
 
 
-class Device(ItemModel):
+class DeviceOut(BaseOutModel):
     name: str
+    device_id: str
+    registration_id: str
+    device_type: str
 
-    def allowed_actions(item, user):
-        return ["oh yeah", "baby", str(user is None), item.device_type]
+    @classmethod
+    def add_fields(item, user):
+        return dict()

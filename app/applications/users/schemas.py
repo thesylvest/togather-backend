@@ -1,31 +1,22 @@
+from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr
+from app.core.base.schemas import BaseOutModel
 
 
 class BaseProperties(BaseModel):
     def create_update_dict(self):
         return self.dict(
             exclude_unset=True,
-            exclude={"id", "is_superuser", "is_active"},
+            exclude={"is_superuser", "is_active"},
         )
 
     def create_update_dict_superuser(self):
         return self.dict(exclude_unset=True, exclude={"id"})
 
 
-class BaseUser(BaseProperties):
-    first_name: Optional[str]
-    last_name: Optional[str]
-    email: Optional[EmailStr] = None
-    username: Optional[str] = None
-    is_active: Optional[bool] = True
-    is_superuser: Optional[bool] = False
-    created_at: Optional[datetime]
-
-
-class BaseUserCreate(BaseProperties):
+class UserCreate(BaseProperties):
     first_name: Optional[str]
     last_name: Optional[str]
     email: EmailStr
@@ -33,7 +24,7 @@ class BaseUserCreate(BaseProperties):
     password: str
 
 
-class BaseUserUpdate(BaseProperties):
+class UserUpdate(BaseProperties):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     password: Optional[str] = None
@@ -45,17 +36,7 @@ class BaseUserUpdate(BaseProperties):
     birth_date: Optional[str] = None
 
 
-class BaseUserDB(BaseUser):
-    id: int
-    password_hash: str
-    updated_at: datetime
-    last_login: Optional[datetime]
-
-    class Config:
-        from_attributes = True
-
-
-class BaseUserOut(BaseUser):
+class UserOut(BaseOutModel):
     id: int
     username: str
     email: EmailStr
@@ -68,12 +49,11 @@ class BaseUserOut(BaseUser):
     social_links: Optional[dict] = None
     birth_date: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
-        
     @classmethod
-    def allowed_actions(cls):
-        return {
-            "GET": cls.__fields__.keys(),
-            "PUT": cls.__fields__.keys(),
-        }
+    def add_fields(cls, item, user):  # TODO: modify actions related to connections
+        if item == user:
+            allowed_actions = ["edit"]
+        else:
+            allowed_actions = ["connect", "block", "hide"]
+
+        return {"allowed_actions": allowed_actions}

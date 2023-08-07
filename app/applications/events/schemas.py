@@ -1,12 +1,11 @@
-from typing import Optional
 from pydantic import BaseModel
 from datetime import datetime
-from app.core.base.schemas import ItemModel
-from tortoise.queryset import QuerySet
-from app.applications.events.models import Category
+from typing import Optional
+
+from app.core.base.schemas import BaseOutModel
 
 
-class BaseEventOut(ItemModel):
+class EventOut(BaseOutModel):
     name: Optional[str] = None
     description: Optional[str] = None
     links: Optional[dict] = None
@@ -22,11 +21,14 @@ class BaseEventOut(ItemModel):
     longitude: Optional[float] = None
     category_id: Optional[int] = None
 
-    class Config:
-        from_attributes = True
-        arbitrary_types_allowed = True
+    @classmethod
+    def add_fields(cls, item, user):  # TODO: Implement correct queries
+        return {
+            "allowed_actions": ["edit and delete if host", "attend if not attendee"]
+        }
 
-class BaseEventCreate(BaseModel):
+
+class EventCreate(BaseModel):
     name: str
     description: Optional[str] = None
     links: Optional[dict] = None

@@ -4,7 +4,7 @@ from tortoise.exceptions import DoesNotExist
 from tortoise import fields
 
 from app.core.auth.utils import password
-from .schemas import BaseUserCreate
+from .schemas import UserCreate
 from app.core.base.models import (
     BaseCreatedAtModel,
     LocationModel,
@@ -65,13 +65,12 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
             return None
 
     @classmethod
-    async def create(cls, user: BaseUserCreate) -> "User":
+    async def create(cls, user: UserCreate) -> "User":
         user_dict = user.dict()
         password_hash = password.get_password_hash(password=user.password)
         model = cls(**user_dict, password_hash=password_hash)
         await model.save()
         return model
-
 
 
 class Connection(BaseDBModel):
@@ -85,7 +84,6 @@ class Connection(BaseDBModel):
     to_user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
         "models.User", related_name="received_connections"
     )
-
 
 
 class Blocked(BaseDBModel):
