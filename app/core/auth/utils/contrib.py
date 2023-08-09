@@ -62,6 +62,12 @@ async def get_current_user(token: str = Security(oauth2_scheme)):
         raise credentials_exception
     return user
 
+async def get_current_user_optional(token: Optional[str] = Depends(oauth2_scheme)):
+    if token is None:
+        return None
+    
+    return await get_current_user(token)
+
 
 async def get_current_active_user(
     current_user: Annotated[User, Depends(get_current_user)]
