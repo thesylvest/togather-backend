@@ -19,27 +19,27 @@ class Organisation(BaseDBModel, BaseCreatedUpdatedAtModel, LocationModel):
 class Club(Organisation):
     class Meta:
         table = "clubs"
-    links = fields.JSONField()
+    links = fields.JSONField(null=True)
     post_policy = fields.BooleanField(default=True)
 
     posts: fields.ReverseRelation["models.Post"]
     hosted_events: fields.ReverseRelation["models.Event"]
 
     members: fields.ManyToManyRelation["models.User"] = fields.ManyToManyField(
-        "models.User", related_name="clubs", through="membership"
+        "models.User", through="memberships"
     )
 
 
 class Membership(BaseDBModel):
     class Meta:
-        table = "members"
+        table = "memberships"
     is_admin = fields.BooleanField(default=False)
 
     club: fields.ForeignKeyRelation["models.Club"] = fields.ForeignKeyField(
-        "models.Club", related_name="membership"
+        "models.Club", related_name="memberships"
     )
     user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
-        "models.User", related_name="membership"
+        "models.User", related_name="memberships"
     )
 
 

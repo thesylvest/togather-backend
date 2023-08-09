@@ -1,6 +1,7 @@
 #!/bin/bash
 
 echo "Init script started"
+aerich init -t app.main.tortoise_config
 
 # Check if the models folder exists indicating database has been initialized
 if [ ! -d "/app/migrations/models" ]; then

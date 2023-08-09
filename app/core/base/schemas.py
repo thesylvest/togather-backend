@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 
-class BaseOutModel(BaseModel):
+class BaseOutSchema(BaseModel):
     class Config:
         from_attributes = True
         arbitrary_types_allowed = True

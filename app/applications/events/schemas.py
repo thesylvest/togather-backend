@@ -2,10 +2,10 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 
-from app.core.base.schemas import BaseOutModel
+from app.core.base.schemas import BaseOutSchema
 
 
-class EventOut(BaseOutModel):
+class EventOut(BaseOutSchema):
     name: Optional[str] = None
     description: Optional[str] = None
     links: Optional[dict] = None
