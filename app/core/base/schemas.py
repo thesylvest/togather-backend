@@ -1,12 +1,23 @@
 from pydantic import BaseModel
 
-from app.applications.users.models import User
 
-
-class ItemModel(BaseModel):
+class BaseOutModel(BaseModel):
     class Config:
         from_attributes = True
+        arbitrary_types_allowed = True
 
-    @staticmethod
-    def allowed_actions(item, user: User | None) -> list[str]:
-        return []  # item is a tortoise model and user is request user
+    @classmethod
+    def serialize(cls, item, user) -> dict:
+        """
+        The item is a orm model, and user can be none or request.user
+        """
+        data: dict = cls.from_orm(item).dict()
+        data.update(cls.add_fields(item, user))
+        return data
+
+    @classmethod
+    def add_fields(cls, item, user) -> dict:
+        """
+        The item is a orm model, and user can be none or request.user
+        """
+        raise NotImplementedError
