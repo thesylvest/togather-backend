@@ -1,7 +1,19 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from app.applications.organisations.models import Club, Place, Membership, Advertisement, Ownership
-from app.applications.organisations.schemas import ClubOut, PlaceOut, ClubIn, PlaceIn, AdvertisementIn
+from app.applications.organisations.models import (
+    Club,
+    Place,
+    Membership,
+    Advertisement,
+    Ownership,
+)
+from app.applications.organisations.schemas import (
+    ClubOut,
+    PlaceOut,
+    ClubIn,
+    PlaceIn,
+    AdvertisementIn,
+)
 from app.applications.users.models import User
 from app.applications.users.schemas import UserOut
 from app.core.auth.utils.contrib import get_current_active_user
@@ -213,8 +225,12 @@ async def get_place_owners(
     place = await Place.get_or_none(id=place_id)
     if not place:
         raise HTTPException(status_code=404, detail="Place not found")
-    
-    owners = await User.filter(ownerships__place_id=place_id).distinct().prefetch_related("ownerships")
+
+    owners = (
+        await User.filter(ownerships__place_id=place_id)
+        .distinct()
+        .prefetch_related("ownerships")
+    )
 
     out = []
 
@@ -264,7 +280,6 @@ async def add_place_owner(
         "message": f"User {user_id} added as an owner to place {place_id}",
         "ownership_id": ownership.id,
     }
-
 
 
 @router.post("/clubs/{club_id}/members")

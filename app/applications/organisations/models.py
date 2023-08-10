@@ -10,6 +10,7 @@ from app.core.base.models import (
 class Organisation(BaseDBModel, BaseCreatedUpdatedAtModel, LocationModel):
     class Meta:
         abstract = True
+
     name = fields.CharField(max_length=255)
     description = fields.CharField(max_length=255, null=True)
     picture = fields.CharField(max_length=255, null=True)
@@ -19,6 +20,7 @@ class Organisation(BaseDBModel, BaseCreatedUpdatedAtModel, LocationModel):
 class Club(Organisation):
     class Meta:
         table = "clubs"
+
     links = fields.JSONField(null=True)
     post_policy = fields.BooleanField(default=True)
 
@@ -33,6 +35,7 @@ class Club(Organisation):
 class Membership(BaseDBModel):
     class Meta:
         table = "memberships"
+
     is_admin = fields.BooleanField(default=False)
 
     club: fields.ForeignKeyRelation["models.Club"] = fields.ForeignKeyField(
@@ -46,6 +49,7 @@ class Membership(BaseDBModel):
 class Place(Organisation):
     class Meta:
         table = "places"
+
     is_valid = fields.BooleanField(default=False)
 
     advertisements: fields.ReverseRelation["models.Advertisement"]
@@ -58,6 +62,7 @@ class Place(Organisation):
 class Advertisement(BaseDBModel, BaseCreatedUpdatedAtModel):
     class Meta:
         table = "advertisements"
+
     description = fields.CharField(max_length=255, null=True)
     picture = fields.CharField(max_length=255, null=True)
 
