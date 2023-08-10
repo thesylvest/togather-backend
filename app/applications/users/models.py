@@ -43,6 +43,7 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
     places: fields.ReverseRelation["models.Place"]
     notifications: fields.ReverseRelation["models.Notifications"]
     devices: fields.ReverseRelation["models.FCMDevice"]
+    owned_places: fields.ReverseRelation["models.Ownership"]
 
     university: fields.ForeignKeyRelation["models.University"] = fields.ForeignKeyField(
         "models.University", related_name="students", null=True

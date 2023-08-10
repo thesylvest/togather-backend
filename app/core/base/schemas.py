@@ -21,3 +21,12 @@ class BaseOutSchema(BaseModel):
         The item is a orm model, and user can be none or request.user
         """
         raise NotImplementedError
+    
+
+class BaseInSchema(BaseModel):
+    def to_dict(self):
+        return self.dict(
+            exclude_unset=True,
+            exclude_none=True,
+            exclude={"id"},
+        )

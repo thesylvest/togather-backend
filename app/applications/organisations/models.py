@@ -26,7 +26,7 @@ class Club(Organisation):
     hosted_events: fields.ReverseRelation["models.Event"]
 
     members: fields.ManyToManyRelation["models.User"] = fields.ManyToManyField(
-        "models.User", through="memberships"
+        "models.User", related_name="club", through="memberships"
     )
 
 
@@ -46,12 +46,12 @@ class Membership(BaseDBModel):
 class Place(Organisation):
     class Meta:
         table = "places"
-    is_valid = fields.BooleanField()
+    is_valid = fields.BooleanField(default=False)
 
-    advertisement: fields.ReverseRelation["models.Advertisement"]
+    advertisements: fields.ReverseRelation["models.Advertisement"]
 
     owners: fields.ManyToManyRelation["models.User"] = fields.ManyToManyField(
-        "models.User", related_name="places", through="ownership"
+        "models.User", related_name="place", through="ownerships"
     )
 
 
@@ -63,4 +63,16 @@ class Advertisement(BaseDBModel, BaseCreatedUpdatedAtModel):
 
     place: fields.ForeignKeyRelation["models.Place"] = fields.ForeignKeyField(
         "models.Place", related_name="advertisements"
+    )
+
+
+class Ownership(BaseDBModel):
+    class Meta:
+        table = "ownerships"
+
+    place: fields.ForeignKeyRelation["models.Place"] = fields.ForeignKeyField(
+        "models.Place", related_name="ownerships"
+    )
+    user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
+        "models.User", related_name="ownerships"
     )
