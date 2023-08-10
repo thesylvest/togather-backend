@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from app.core.base.schemas import BaseOutModel
+from app.core.base.schemas import BaseOutSchema
 
 
 class RegisterDeviceIn(BaseModel):
@@ -15,7 +15,7 @@ class RegisterDeviceOut(BaseModel):
     created: bool
 
 
-class DeviceOut(BaseOutModel):
+class DeviceOut(BaseOutSchema):
     name: str
     device_id: str
     registration_id: str

@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from typing import Optional
 
-from app.core.base.schemas import BaseOutModel
+from app.core.base.schemas import BaseOutSchema
 
 
 class BaseProperties(BaseModel):
@@ -36,7 +36,7 @@ class UserUpdate(BaseProperties):
     birth_date: Optional[str] = None
 
 
-class UserOut(BaseOutModel):
+class UserOut(BaseOutSchema):
     id: int
     username: str
     email: EmailStr

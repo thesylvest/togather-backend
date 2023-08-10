@@ -12,6 +12,7 @@ from app.applications.events.routes import router as events_router, category_rou
 from app.applications.users.routes import router as users_router
 from app.core.auth.routes import router as auth_router
 from app.core.fcm.routes import router as fcm_router
+from app.applications.organisations.routes import router as organisations_router
 
 logging.config.dictConfig(config.DEFAULT_LOGGING)
 
@@ -61,3 +62,4 @@ app.include_router(events_router, prefix='/api/events')
 app.include_router(category_router, prefix='/api/categories')
 app.include_router(notification_router, prefix='/api/notifications')
 app.include_router(fcm_router, prefix='/api/fcm')
+app.include_router(organisations_router, prefix='/api/organisations')

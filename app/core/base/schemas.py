@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 
-class BaseOutModel(BaseModel):
+class BaseOutSchema(BaseModel):
     class Config:
         from_attributes = True
         arbitrary_types_allowed = True
@@ -21,3 +21,12 @@ class BaseOutModel(BaseModel):
         The item is a orm model, and user can be none or request.user
         """
         raise NotImplementedError
+    
+
+class BaseInSchema(BaseModel):
+    def to_dict(self):
+        return self.dict(
+            exclude_unset=True,
+            exclude_none=True,
+            exclude={"id"},
+        )

@@ -1,8 +1,8 @@
 from .models import Notification, NotificationType
-from app.core.base.schemas import BaseOutModel
+from app.core.base.schemas import BaseOutSchema
 
 
-class NotificationOut(BaseOutModel):
+class NotificationOut(BaseOutSchema):
     @classmethod
     def add_fields(cls, item: Notification, user):
         match item.type:
