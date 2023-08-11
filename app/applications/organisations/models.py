@@ -24,11 +24,11 @@ class Club(Organisation):
     links = fields.JSONField(null=True)
     post_policy = fields.BooleanField(default=True)
 
-    posts: fields.ReverseRelation["models.Post"]
-    hosted_events: fields.ReverseRelation["models.Event"]
+    posts: fields.ReverseRelation
+    hosted_events: fields.ReverseRelation
 
-    members: fields.ManyToManyRelation["models.User"] = fields.ManyToManyField(
-        "models.User", related_name="club", through="memberships"
+    members: fields.ManyToManyRelation = fields.ManyToManyField(
+        "models.User", related_name="clubs", backward_key="club_id", through="memberships"
     )
 
 
@@ -38,10 +38,10 @@ class Membership(BaseDBModel):
 
     is_admin = fields.BooleanField(default=False)
 
-    club: fields.ForeignKeyRelation["models.Club"] = fields.ForeignKeyField(
+    club: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.Club", related_name="memberships"
     )
-    user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
+    user: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", related_name="memberships"
     )
 
@@ -52,10 +52,10 @@ class Place(Organisation):
 
     is_valid = fields.BooleanField(default=False)
 
-    advertisements: fields.ReverseRelation["models.Advertisement"]
+    advertisements: fields.ReverseRelation
 
-    owners: fields.ManyToManyRelation["models.User"] = fields.ManyToManyField(
-        "models.User", related_name="place", through="ownerships"
+    owners: fields.ManyToManyRelation = fields.ManyToManyField(
+        "models.User", related_name="place", backward_key="place_id", through="ownerships"
     )
 
 
@@ -66,7 +66,7 @@ class Advertisement(BaseDBModel, BaseCreatedUpdatedAtModel):
     description = fields.CharField(max_length=255, null=True)
     picture = fields.CharField(max_length=255, null=True)
 
-    place: fields.ForeignKeyRelation["models.Place"] = fields.ForeignKeyField(
+    place: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.Place", related_name="advertisements"
     )
 
@@ -75,9 +75,9 @@ class Ownership(BaseDBModel):
     class Meta:
         table = "ownerships"
 
-    place: fields.ForeignKeyRelation["models.Place"] = fields.ForeignKeyField(
+    place: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.Place", related_name="ownerships"
     )
-    user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
+    user: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", related_name="ownerships"
     )

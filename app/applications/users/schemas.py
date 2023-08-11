@@ -1,8 +1,9 @@
+from tortoise.contrib.pydantic import pydantic_model_creator
 from pydantic import BaseModel, EmailStr
-from datetime import datetime
 from typing import Optional
 
 from app.core.base.schemas import BaseOutSchema
+from app.applications.users.models import User
 
 
 class BaseProperties(BaseModel):
@@ -37,17 +38,7 @@ class UserUpdate(BaseProperties):
 
 
 class UserOut(BaseOutSchema):
-    id: int
-    username: str
-    email: EmailStr
-    created_at: datetime
-    last_login: Optional[datetime] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    bio: Optional[str] = None
-    gender: Optional[str] = None
-    social_links: Optional[dict] = None
-    birth_date: Optional[datetime] = None
+    pydantic_model = pydantic_model_creator(User)
 
     @classmethod
     def add_fields(cls, item, user):  # TODO: modify actions related to connections

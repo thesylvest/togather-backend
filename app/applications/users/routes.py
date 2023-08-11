@@ -29,7 +29,7 @@ async def read_users(
     return await paginate(users, page, page_size, request, UserOut, current_user)
 
 
-@router.post("/", response_model=UserOut, status_code=201, tags=["users"])
+@router.post("/", status_code=201, tags=["users"])
 async def create_user(
     *,
     user_in: UserCreate,
@@ -67,10 +67,10 @@ async def create_user(
             username=user_in.email,
             password=user_in.password,
         )
-    return created_user
+    return await UserOut.serialize(created_user, current_user)
 
 
-@router.put("/me", response_model=UserOut, status_code=200, tags=["users"])
+@router.put("/me", status_code=200, tags=["users"])
 async def update_user_me(
     user_in: UserUpdate, current_user: User = Depends(get_current_active_user)
 ):
@@ -84,17 +84,17 @@ async def update_user_me(
             setattr(user, field, value)
 
     await user.save()
-    return user
+    return await UserOut.serialize(current_user, current_user)
 
 
-@router.get("/me", response_model=UserOut, status_code=200, tags=["users"])
-def read_user_me(
+@router.get("/me", status_code=200, tags=["users"])
+async def read_user_me(
     current_user: User = Depends(get_current_active_user),
 ):
     """
     Get current user's info.
     """
-    return UserOut.serialize(current_user, current_user)
+    return await UserOut.serialize(current_user, current_user)
 
 
 @router.get("/{user_id}", status_code=200, tags=["users"])
@@ -111,10 +111,10 @@ async def read_user_by_id(
             status_code=404,
             detail="The user with this id does not exist in the system",
         )
-    return UserOut.serialize(user, current_user)
+    return await UserOut.serialize(user, current_user)
 
 
-@router.put("/{user_id}", response_model=UserOut, status_code=200, tags=["users"])
+@router.put("/{user_id}", status_code=200, tags=["users"])
 async def update_user(
     user_id: int,
     user_in: UserUpdate,
@@ -131,7 +131,7 @@ async def update_user(
         )
     user = await user.update_from_dict(user_in.create_update_dict_superuser())
     await user.save()
-    return user
+    return await UserOut.serialize(user, current_user)
 
 
 @router.get(
@@ -205,7 +205,7 @@ async def get_user_received_connections(
     received = current_user.received_connections.filter(
         is_accepted=False
     ).prefetch_related("from_user")
-    return paginate(received, page, page_size, request, UserOut, current_user)
+    return await paginate(received, page, page_size, request, UserOut, current_user)
 
 
 @router.get(
@@ -225,7 +225,8 @@ async def get_user_sent_connections(
     sent = current_user.sent_connections.filter(
         is_accepted=False
     ).prefetch_related("to_user")
-    return paginate(sent, page, page_size, request, UserOut, current_user)
+    return await sent
+    # return await paginate(sent, page, page_size, request, UserOut, current_user)
 
 
 @router.get(
@@ -243,4 +244,4 @@ async def get_user_events(
     Get current user's events
     """
     events = current_user.hosted_events.order_by("-start_date")
-    return paginate(events, page, page_size, request, EventOut, current_user)
+    return await paginate(events, page, page_size, request, EventOut, current_user)

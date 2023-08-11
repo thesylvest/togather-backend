@@ -15,12 +15,12 @@ class Post(BaseDBModel, BaseCreatedUpdatedAtModel, LocationModel):
     media = fields.CharField(max_length=255, null=True)
     content = fields.TextField()
 
-    comments: fields.ReverseRelation["models.Comment"]
+    comments: fields.ReverseRelation
 
-    author_user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
+    author_user: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", related_name="posts", null=True
     )
-    author_club: fields.ForeignKeyRelation["models.Club"] = fields.ForeignKeyField(
+    author_club: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.Club", related_name="posts", null=True
     )
 
@@ -32,14 +32,14 @@ class Comment(BaseDBModel, BaseCreatedUpdatedAtModel):
     content = fields.TextField()
     media = fields.CharField(max_length=255, null=True)
 
-    comments: fields.ReverseRelation["models.Comment"]
+    comments: fields.ReverseRelation
 
-    author: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
+    author: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", related_name="comments"
     )
-    post: fields.ForeignKeyRelation["models.Post"] = fields.ForeignKeyField(
+    post: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.Post", related_name="comments"
     )
-    reply_to: fields.ForeignKeyRelation["models.Comment"] = fields.ForeignKeyField(
+    reply_to: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.Comment", related_name="comments", null=True
     )

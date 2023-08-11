@@ -19,12 +19,29 @@ class NotificationType(str, Enum):
 class Notification(BaseDBModel, BaseCreatedAtModel, ContentType):
     class Meta:
         table = "notifications"
+
+    class PydanticMeta:
+        computed = ("notification_data",)
     is_anon = fields.BooleanField(default=False)
     type = fields.CharEnumField(enum_type=NotificationType)
 
-    sent_to: fields.ManyToManyRelation["models.User"] = fields.ManyToManyField(
+    sent_to: fields.ManyToManyRelation = fields.ManyToManyField(
         "models.User", related_name="notifications"
     )
+
+    def notification_data(self) -> dict[str, str]:
+        match self.type:
+            case NotificationType.user:
+                return {"computed": "compute"}
+            case NotificationType.post:
+                return {"computed": "compute"}
+            case NotificationType.event:
+                return {"computed": "compute"}
+            case NotificationType.like:
+                return {"computed": "compute"}
+            case NotificationType.comment:
+                return {"computed": "compute"}
+        return {"computed": "not compute"}
 
 
 class Tag(BaseDBModel, ContentType):
@@ -38,7 +55,7 @@ class Report(BaseDBModel, BaseCreatedAtModel, ContentType):
         table = "reports"
     reason = fields.CharField(max_length=512)
 
-    repoter: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
+    repoter: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", related_name="reports"
     )
 
@@ -46,6 +63,6 @@ class Report(BaseDBModel, BaseCreatedAtModel, ContentType):
 class Hide(BaseDBModel, BaseCreatedAtModel, ContentType):
     class Meta:
         table = "hides"
-    hider: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
+    hider: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", related_name="hides"
     )
