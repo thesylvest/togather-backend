@@ -1,5 +1,14 @@
 from firebase_admin import messaging
 
+from app.core.base.filter_set import FilterSet
+from .models import FCMDevice
+
+
+class FCMDeviceFilter(FilterSet):
+    class Parameters(FilterSet.Parameters):
+        user__username__icontains: str | None = None
+    model = FCMDevice
+
 
 def send_notification(registration_ids, title, body, image):
     batch_tokens = [registration_ids[i:i + 100] for i in range(0, len(registration_ids), 100)]
