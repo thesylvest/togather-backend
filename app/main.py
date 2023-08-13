@@ -1,18 +1,13 @@
 from tortoise.contrib.fastapi import register_tortoise
 from firebase_admin import credentials, initialize_app
 from fastapi.middleware.cors import CORSMiddleware
+from tortoise import Tortoise
 from fastapi import FastAPI
 import logging.config
 
 from app.core.base.exceptions import APIException, on_api_exception
 from app.settings import config
 
-from app.applications.interactions.routes import notification_router
-from app.applications.events.routes import router as events_router, category_router
-from app.applications.users.routes import router as users_router
-from app.core.auth.routes import router as auth_router
-from app.core.fcm.routes import router as fcm_router
-from app.applications.organisations.routes import router as organisations_router
 
 logging.config.dictConfig(config.DEFAULT_LOGGING)
 
@@ -55,6 +50,15 @@ register_tortoise(
     add_exception_handlers=True,
 )
 
+Tortoise.init_models(app_list, "models")
+# these imports must be after init models call
+from app.applications.interactions.routes import notification_router
+from app.applications.events.routes import router as events_router, category_router
+from app.applications.users.routes import router as users_router
+from app.core.auth.routes import router as auth_router
+from app.core.fcm.routes import router as fcm_router
+from app.applications.organisations.routes import club_router, place_router
+
 app.add_exception_handler(APIException, on_api_exception)
 app.include_router(auth_router, prefix='/api/auth')
 app.include_router(users_router, prefix='/api/users')
@@ -62,4 +66,5 @@ app.include_router(events_router, prefix='/api/events')
 app.include_router(category_router, prefix='/api/categories')
 app.include_router(notification_router, prefix='/api/notifications')
 app.include_router(fcm_router, prefix='/api/fcm')
-app.include_router(organisations_router, prefix='/api/organisations')
+app.include_router(club_router, prefix='/api/clubs')
+app.include_router(place_router, prefix="/api/places")

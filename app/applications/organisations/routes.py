@@ -1,5 +1,5 @@
-from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+
 from app.applications.organisations.models import (
     Club,
     Place,
@@ -13,17 +13,18 @@ from app.applications.organisations.schemas import (
     ClubIn,
     PlaceIn,
     AdvertisementIn,
+    ClubMembersOut,
 )
-from app.applications.users.models import User
-from app.applications.users.schemas import UserOut
 from app.core.auth.utils.contrib import get_current_active_user
+from app.applications.users.schemas import UserOut
+from app.applications.users.models import User
 from app.core.base.paginator import paginate
 
 
-router = APIRouter()
+club_router, place_router = APIRouter(), APIRouter()
 
 
-@router.get("/clubs")
+@club_router.get("", tags=["clubs"])
 async def get_clubs(
     request: Request,
     page: int = Query(1, ge=1, title="Page number"),
@@ -35,7 +36,7 @@ async def get_clubs(
     return await paginate(clubs, page, page_size, request, ClubOut, current_user)
 
 
-@router.get("/places")
+@place_router.get("", tags=["places"])
 async def get_places(
     request: Request,
     page: int = Query(1, ge=1, title="Page number"),
@@ -47,73 +48,53 @@ async def get_places(
     return await paginate(places, page, page_size, request, PlaceOut, current_user)
 
 
-@router.get("/clubs/{club_id}")
+@club_router.get("/{club_id}", tags=["clubs"])
 async def get_club(
     club_id: int,
     current_user: User = Depends(get_current_active_user),
-    response_model=ClubOut,
 ):
     """Get a club."""
-    club = await Club.get_or_none(id=club_id).values()
+    club = await Club.get_or_none(id=club_id)
     if not club:
         raise HTTPException(status_code=404, detail="Club not found")
-
-    out = ClubOut(**club)
-
-    return out
+    return ClubOut.serialize(club, current_user)
 
 
-@router.get("/places/{place_id}")
+@place_router.get("/{place_id}", tags=["places"])
 async def get_place(
     place_id: int,
     current_user: User = Depends(get_current_active_user),
-    response_model=PlaceOut,
 ):
     """Get a place."""
-    place = await Place.get_or_none(id=place_id).values()
+    place = await Place.get_or_none(id=place_id)
     if not place:
         raise HTTPException(status_code=404, detail="Place not found")
-
-    out = PlaceOut(**place)
-
-    return out
+    return PlaceOut.serialize(place, current_user)
 
 
-@router.get("/clubs/{club_id}/members")
+@club_router.get("/{club_id}/members", tags=["clubs"])
 async def get_club_members(
     club_id: int,
+    request: Request,
+    page: int = Query(1, ge=1, title="Page number"),
+    page_size: int = Query(10, ge=1, le=100, title="Page size"),
     current_user: User = Depends(get_current_active_user),
-    response_model=List[UserOut],
 ):
     """Get all members of a club."""
     club = await Club.get_or_none(id=club_id)
     if not club:
         raise HTTPException(status_code=404, detail="Club not found")
 
-    memberships = await club.memberships.all().prefetch_related("user")
-
-    out = []
-    for membership in memberships:
-        member = membership.user
-
-        out.append(
-            UserOut(
-                id=member.id,
-                first_name=member.first_name,
-                last_name=member.last_name,
-                username=member.username,
-                email=member.email,
-                bio=member.bio,
-                created_at=member.created_at,
-            )
-        )
-
-    return out
+    members = Membership.filter(club=club)
+    return await paginate(members, page, page_size, request, ClubMembersOut, current_user)
 
 
-@router.get("/clubs/{club_id}/admins")
+@club_router.get("/{club_id}/admins", tags=["clubs"])
 async def get_club_admins(
     club_id: int,
+    request: Request,
+    page: int = Query(1, ge=1, title="Page number"),
+    page_size: int = Query(10, ge=1, le=100, title="Page size"),
     current_user: User = Depends(get_current_active_user),
 ):
     """Get all admins of a club."""
@@ -121,34 +102,11 @@ async def get_club_admins(
     if not club:
         raise HTTPException(status_code=404, detail="Club not found")
 
-    users = (
-        await User.filter(
-            memberships__club_id=club_id,
-            memberships__is_admin=True,
-        )
-        .distinct()
-        .prefetch_related("memberships")
-    )
-
-    out = []
-
-    for user in users:
-        out.append(
-            UserOut(
-                id=user.id,
-                first_name=user.first_name,
-                last_name=user.last_name,
-                username=user.username,
-                email=user.email,
-                bio=user.bio,
-                created_at=user.created_at,
-            )
-        )
-
-    return out
+    members = Membership.filter(club=club, is_admin=True)
+    return await paginate(members, page, page_size, request, ClubMembersOut, current_user)
 
 
-@router.post("/clubs/{club_id}/admins/{user_id}")
+@club_router.post("/{club_id}/admins/{user_id}", tags=["clubs"])
 async def add_club_admin(
     club_id: int,
     user_id: int,
@@ -185,19 +143,22 @@ async def add_club_admin(
     }
 
 
-@router.get("/places/{place_id}/ads")
+@place_router.get("/{place_id}/ads", tags=["places"])
 async def get_place_ads(
     place_id: int,
+    request: Request,
+    page: int = Query(1, ge=1, title="Page number"),
+    page_size: int = Query(10, ge=1, le=100, title="Page size"),
     current_user: User = Depends(get_current_active_user),
 ):
     """Get all ads of a place."""
     place = await Place.get_or_none(id=place_id)
     if not place:
         raise HTTPException(status_code=404, detail="Place not found")
-    return await place.advertisements.all()
+    return await place.advertisements.all()  # TODO: make this paginated
 
 
-@router.post("/places/{place_id}/ads")
+@place_router.post("/{place_id}/ads", tags=["places"])
 async def add_place_ad(
     place_id: int,
     ad_in: AdvertisementIn,
@@ -216,9 +177,12 @@ async def add_place_ad(
     }
 
 
-@router.get("/places/{place_id}/owners")
+@place_router.get("/{place_id}/owners", tags=["places"])
 async def get_place_owners(
     place_id: int,
+    request: Request,
+    page: int = Query(1, ge=1, title="Page number"),
+    page_size: int = Query(10, ge=1, le=100, title="Page size"),
     current_user: User = Depends(get_current_active_user),
 ):
     """Get all owners of a place."""
@@ -226,31 +190,11 @@ async def get_place_owners(
     if not place:
         raise HTTPException(status_code=404, detail="Place not found")
 
-    owners = (
-        await User.filter(ownerships__place_id=place_id)
-        .distinct()
-        .prefetch_related("ownerships")
-    )
-
-    out = []
-
-    for owner in owners:
-        out.append(
-            UserOut(
-                id=owner.id,
-                first_name=owner.first_name,
-                last_name=owner.last_name,
-                username=owner.username,
-                email=owner.email,
-                bio=owner.bio,
-                created_at=owner.created_at,
-            )
-        )
-
-    return out
+    owners = place.owners.all()
+    return await paginate(owners, page, page_size, request, UserOut, current_user)
 
 
-@router.post("/places/{place_id}/owners/{user_id}")
+@place_router.post("/{place_id}/owners/{user_id}", tags=["places"])
 async def add_place_owner(
     place_id: int,
     user_id: int,
@@ -282,7 +226,7 @@ async def add_place_owner(
     }
 
 
-@router.post("/clubs/{club_id}/members")
+@club_router.post("/{club_id}/members", tags=["clubs"])
 async def add_club_member(
     club_id: int,
     user_id: int,
@@ -315,13 +259,14 @@ async def add_club_member(
     }
 
 
-@router.post("/clubs")
+@club_router.post("", tags=["clubs"])
 async def create_club(
     club_in: ClubIn,
     current_user: User = Depends(get_current_active_user),
 ):
     """Create a club."""
     club = await Club.create(**club_in.to_dict())
+    await Membership.create(club=club, user=current_user, is_admin=True)
 
     return {
         "message": "Club created successfully.",
@@ -329,13 +274,14 @@ async def create_club(
     }
 
 
-@router.post("/places")
+@place_router.post("", tags=["places"])
 async def create_place(
     place_in: PlaceIn,
     current_user: User = Depends(get_current_active_user),
 ):
     """Create a place."""
     place = await Place.create(**place_in.to_dict())
+    await place.owners.add(current_user)
 
     return {
         "message": "Place created successfully.",

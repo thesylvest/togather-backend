@@ -2,6 +2,7 @@ from tortoise import fields
 from enum import Enum
 
 from app.core.base.models import BaseDBModel, BaseCreatedAtModel
+from app.applications.users.models import User
 
 
 class DeviceType(str, Enum):
@@ -18,6 +19,6 @@ class FCMDevice(BaseDBModel, BaseCreatedAtModel):
     registration_id = fields.TextField()
     device_type = fields.CharEnumField(enum_type=DeviceType, max_length=10)
 
-    user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
+    user: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
         "models.User", related_name="devices", on_delete=fields.base.CASCADE
     )

@@ -29,7 +29,7 @@ async def paginate(
     offset = (page - 1) * page_size
 
     page_data = [
-        Serializer.serialize(item=item, user=request_user)
+        await Serializer.serialize(item=item, user=request_user)
         for item in await queryset.limit(page_size).offset(offset)
     ]
 

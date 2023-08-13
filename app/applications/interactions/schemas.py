@@ -1,19 +1,8 @@
-from .models import Notification, NotificationType
+from tortoise.contrib.pydantic import pydantic_model_creator
+
 from app.core.base.schemas import BaseOutSchema
+from .models import Notification
 
 
 class NotificationOut(BaseOutSchema):
-    @classmethod
-    def add_fields(cls, item: Notification, user):
-        match item.type:
-            case NotificationType.user:
-                return {"type": "user"}
-            case NotificationType.post:
-                return {"type": "post"}
-            case NotificationType.event:
-                return {"type": "event"}
-            case NotificationType.like:
-                return {"type": "like"}
-            case NotificationType.comment:
-                return {"type": "comment"}
-        return {"type": "invalid"}
+    pydantic_model = pydantic_model_creator(Notification, exclude=("sent_to", ))

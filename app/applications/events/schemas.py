@@ -1,25 +1,14 @@
+from tortoise.contrib.pydantic import pydantic_model_creator
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 
 from app.core.base.schemas import BaseOutSchema
+from .models import Event
 
 
 class EventOut(BaseOutSchema):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    links: Optional[dict] = None
-    form: Optional[dict] = None
-    start_date: datetime
-    end_date: datetime
-    media: Optional[dict] = None
-    rate: float
-    qr_code: Optional[dict] = None
-    verification_link: Optional[str] = None
-    host: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    category_id: Optional[int] = None
+    pydantic_model = pydantic_model_creator(Event)
 
     @classmethod
     def add_fields(cls, item, user):  # TODO: Implement correct queries

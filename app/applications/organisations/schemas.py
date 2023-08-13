@@ -1,25 +1,8 @@
+from tortoise.contrib.pydantic import pydantic_model_creator
 from typing import Optional
-from pydantic import BaseModel
+
 from app.core.base.schemas import BaseOutSchema, BaseInSchema
-
-
-class BaseOrganisationOut(BaseOutSchema):
-    id: int
-    name: str
-    description: Optional[str] = None
-    picture: Optional[str] = None
-    banner: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-
-    @classmethod
-    def add_fields(cls, item, user):  # TODO: modify actions related to connections
-        if item == user:
-            allowed_actions = ["edit"]
-        else:
-            allowed_actions = ["connect", "block", "hide"]
-
-        return {"allowed_actions": allowed_actions}
+from .models import Club, Place, Membership
 
 
 class ClubIn(BaseInSchema):
@@ -33,9 +16,21 @@ class ClubIn(BaseInSchema):
     post_policy: Optional[bool] = None
 
 
-class ClubOut(BaseOrganisationOut):
-    links: Optional[dict] = None
-    post_policy: Optional[bool] = None
+class ClubOut(BaseOutSchema):
+    pydantic_model = pydantic_model_creator(Club, exclude=("members", "memberships"))
+
+    @classmethod
+    def add_fields(cls, item, user):  # TODO: modify actions related to connections
+        if item == user:
+            allowed_actions = ["edit"]
+        else:
+            allowed_actions = ["connect", "block", "hide"]
+
+        return {"allowed_actions": allowed_actions}
+
+
+class ClubMembersOut(BaseOutSchema):
+    pydantic_model = pydantic_model_creator(Membership, exclude=("club", "club_id", "id"))
 
 
 class PlaceIn(BaseInSchema):
@@ -47,8 +42,8 @@ class PlaceIn(BaseInSchema):
     longitude: Optional[float] = None
 
 
-class PlaceOut(BaseOrganisationOut):
-    is_valid: Optional[bool] = None
+class PlaceOut(BaseOutSchema):
+    pydantic_model = pydantic_model_creator(Place, exclude=("ownerships", ))
 
 
 class AdvertisementIn(BaseInSchema):

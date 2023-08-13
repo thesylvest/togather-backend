@@ -4,7 +4,6 @@ from tortoise.exceptions import DoesNotExist
 from tortoise import fields
 
 from app.core.auth.utils import password
-from .schemas import UserCreate
 from app.core.base.models import (
     BaseCreatedAtModel,
     LocationModel,
@@ -15,6 +14,10 @@ from app.core.base.models import (
 class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
     class Meta:
         table = "users"
+
+    class PydanticMeta:
+        backward_relations = False
+        exclude = ("password_hash", "clubs", "hosted_events", "place", "notifications", "is_superuser", "is_active")
     username = fields.CharField(max_length=50, unique=True)
     email = fields.CharField(max_length=255, unique=True)
     first_name = fields.CharField(max_length=50, null=True)
@@ -30,22 +33,21 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
     profile_picture = fields.CharField(max_length=255, null=True)
     unread_notifications = fields.IntField(default=0)
 
-    sent_connections: fields.ReverseRelation["models.Connection"]
-    received_connections: fields.ReverseRelation["models.Connection"]
-    blocked_users: fields.ReverseRelation["models.Blocked"]
-    posts: fields.ReverseRelation["models.Post"]
-    comments: fields.ReverseRelation["models.Comment"]
-    hosted_events: fields.ReverseRelation["models.Event"]
-    form_responses: fields.ReverseRelation["models.FormResponse"]
-    reports: fields.ReverseRelation["models.Report"]
-    hides: fields.ReverseRelation["models.Hide"]
-    clubs: fields.ReverseRelation["models.Club"]
-    places: fields.ReverseRelation["models.Place"]
-    notifications: fields.ReverseRelation["models.Notifications"]
-    devices: fields.ReverseRelation["models.FCMDevice"]
-    owned_places: fields.ReverseRelation["models.Ownership"]
+    sent_connections: fields.ReverseRelation
+    received_connections: fields.ReverseRelation
+    blocked_users: fields.ReverseRelation
+    posts: fields.ReverseRelation
+    comments: fields.ReverseRelation
+    form_responses: fields.ReverseRelation
+    reports: fields.ReverseRelation
+    hides: fields.ReverseRelation
+    devices: fields.ReverseRelation
+    hosted_events: fields.ManyToManyRelation
+    places: fields.ManyToManyRelation
+    notifications: fields.ManyToManyRelation
+    clubs: fields.ManyToManyRelation
 
-    university: fields.ForeignKeyRelation["models.University"] = fields.ForeignKeyField(
+    university: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.University", related_name="students", null=True
     )
 
@@ -66,7 +68,7 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
             return None
 
     @classmethod
-    async def create(cls, user: UserCreate) -> "User":
+    async def create(cls, user) -> "User":
         user_dict = user.dict()
         password_hash = password.get_password_hash(password=user.password)
         model = cls(**user_dict, password_hash=password_hash)
@@ -79,10 +81,10 @@ class Connection(BaseDBModel):
         table = "connections"
     is_accepted = fields.BooleanField(default=False)
 
-    from_user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
+    from_user: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", related_name="sent_connections"
     )
-    to_user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
+    to_user: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", related_name="received_connections"
     )
 
@@ -90,10 +92,10 @@ class Connection(BaseDBModel):
 class Blocked(BaseDBModel):
     class Meta:
         table = "blocked"
-    blocking_user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
+    blocking_user: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User"
     )
-    blocked_user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
+    blocked_user: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", related_name="blocked_users"
     )
 
@@ -103,6 +105,6 @@ class University(BaseDBModel, LocationModel):
         table = "universities"
     name = fields.CharField(max_length=255, unique=True)
 
-    clubs: fields.ReverseRelation["models.Club"]
-    students: fields.ReverseRelation["models.User"]
-    events: fields.ReverseRelation["models.Event"]
+    clubs: fields.ReverseRelation
+    students: fields.ReverseRelation
+    events: fields.ReverseRelation

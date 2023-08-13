@@ -22,15 +22,15 @@ class Event(BaseDBModel, BaseCreatedAtModel, LocationModel):
     qr_code = fields.JSONField(null=True)
     verification_link = fields.CharField(max_length=255, null=True)
 
-    responses: fields.ReverseRelation["models.FormResponse"]
+    responses: fields.ReverseRelation
 
-    host_user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
+    host_user: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", related_name="hosted_events", null=True
     )
-    host_club: fields.ForeignKeyRelation["models.Club"] = fields.ForeignKeyField(
+    host_club: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.Club", related_name="hosted_events", null=True
     )
-    category: fields.ForeignKeyRelation["models.Category"] = fields.ForeignKeyField(
+    category: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.Category", related_name="events", null=True
     )
 
@@ -40,10 +40,10 @@ class FormResponse(BaseDBModel, BaseCreatedAtModel):
         table = "form_responses"
     data = fields.JSONField()
 
-    event: fields.ForeignKeyRelation["models.Event"] = fields.ForeignKeyField(
+    event: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.Event", related_name="responses"
     )
-    user: fields.ForeignKeyRelation["models.User"] = fields.ForeignKeyField(
+    user: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", related_name="form_responses"
     )
 
@@ -54,4 +54,4 @@ class Category(BaseDBModel):
     name = fields.CharField(max_length=255)
     picture = fields.CharField(max_length=255, null=True)
 
-    events = fields.ReverseRelation["models.Event"]
+    events = fields.ReverseRelation
