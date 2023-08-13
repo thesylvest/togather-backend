@@ -3,9 +3,9 @@ from fastapi import APIRouter, Depends, Query, Request
 from app.core.auth.utils.contrib import get_current_active_user, get_current_active_superuser
 from .schemas import RegisterDeviceOut, RegisterDeviceIn, DeviceOut
 from app.applications.users.models import User
-from .models import FCMDevice
-
+from app.core.fcm.utils import FCMDeviceFilter
 from app.core.base.paginator import paginate
+from .models import FCMDevice
 
 router = APIRouter()
 
@@ -33,10 +33,10 @@ async def device(
     request: Request,
     page: int = Query(1, ge=1, title="Page number"),
     page_size: int = Query(10, ge=1, le=100, title="Page size"),
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_user),  # TODO: make superuser
+    devices=Depends(FCMDeviceFilter.dependency()),
 ):
     """
     Gets device list
     """
-    devices = FCMDevice.all()
     return await paginate(devices, page, page_size, request, DeviceOut, current_user)
