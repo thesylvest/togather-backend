@@ -1,5 +1,14 @@
 from typing import Annotated
-from fastapi import APIRouter, Body, HTTPException, BackgroundTasks, status, Request, Depends
+from fastapi import (
+    APIRouter,
+    Body,
+    HTTPException,
+    BackgroundTasks,
+    status,
+    Request,
+    Depends,
+    Response,
+)
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.auth.utils.contrib import (
@@ -7,11 +16,15 @@ from app.core.auth.utils.contrib import (
     verify_password_reset_token,
     authenticate,
     decode_google_token,
-    oauth2_scheme
 )
 from app.core.auth.schemas import JWTToken, CredentialsSchema, Msg
+from app.core.base.exceptions import APIException
 from app.core.auth.utils.password import get_password_hash
-from app.core.auth.utils.jwt import create_access_token
+from app.core.auth.utils.jwt import (
+    create_access_token,
+    create_refresh_token,
+    create_access_token_from_refresh_token,
+)
 
 from app.applications.users.utils import update_last_login
 from app.applications.users.models import User
@@ -22,10 +35,15 @@ import google_auth_oauthlib.flow
 router = APIRouter()
 
 
-@router.post("/access-token", response_model=JWTToken, tags=["auth"])
-async def login_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+@router.post("/token", response_model=JWTToken, tags=["auth"])
+async def login_access_token(
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    response: Response,
+):
     user = await User.get_by_username(username=form_data.username)
-    credentials = CredentialsSchema(username=form_data.username, password=form_data.password, email=user.email)
+    credentials = CredentialsSchema(
+        username=form_data.username, password=form_data.password, email=user.email
+    )
     user = await authenticate(credentials)
     if user:
         await update_last_login(user.id)
@@ -39,10 +57,37 @@ async def login_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Dep
             status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
         )
 
+    response.set_cookie(
+        key="refresh_token",
+        value=create_refresh_token(
+            data={"user_id": user.id, "username": user.username, "email": user.email},
+        ),
+        httponly=True,
+        max_age=config.JWT_REFRESH_TOKEN_EXPIRE_MINUTES * 60,
+        expires=config.JWT_REFRESH_TOKEN_EXPIRE_MINUTES * 60,
+    )
+
     return {
         "access_token": create_access_token(
             data={"user_id": user.id, "username": user.username, "email": user.email},
         ),
+        "token_type": "bearer",
+    }
+
+
+@router.get("/refresh", response_model=JWTToken, tags=["auth"])
+async def refresh_token(request: Request):
+    token = request.cookies.get("refresh_token")
+    if token is None:
+        raise APIException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Refresh token not found",
+        )
+
+    access_token = create_access_token_from_refresh_token(token)
+
+    return {
+        "access_token": access_token,
         "token_type": "bearer",
     }
 
@@ -59,7 +104,9 @@ async def recover_password(email: str, background_tasks: BackgroundTasks):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="The user with this username does not exist in the system.",
         )
+
     password_reset_token = generate_password_reset_token(email=email)
+
     if config.EMAILS_ENABLED:
         background_tasks.add_task(
             send_reset_password_email,
@@ -205,9 +252,11 @@ async def login_google_callback(request: Request):
         }
     else:
         user_dict = {
-            "username": decoded_info["email"].split("@")[0], # TODO: need to check if username already exists
+            "username": decoded_info["email"].split("@")[
+                0
+            ],  # TODO: need to check if username already exists
             "email": decoded_info["email"],
-            "password": "pass", # MASSIVE TODO: change this to something more secure
+            "password": "pass",  # MASSIVE TODO: change this to something more secure
             "first_name": decoded_info["given_name"],
             "last_name": decoded_info["family_name"],
         }

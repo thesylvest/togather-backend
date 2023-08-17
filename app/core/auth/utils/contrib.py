@@ -3,18 +3,20 @@ from typing import Optional, Annotated
 
 from fastapi import HTTPException, Security, status, Depends, Body
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError
+from jose import jwt
+from jose.exceptions import ExpiredSignatureError, JWTError
 
-from app.core.auth.schemas import JWTTokenPayload, CredentialsSchema, JWTTokenData, JWTToken
+from app.core.auth.schemas import CredentialsSchema, JWTTokenData
 from app.applications.users.models import User
 from app.core.auth.utils import password
 from app.settings import config
+from app.core.base.exceptions import APIException
 
 from google.oauth2 import id_token
 from google.auth.transport import requests
 
 password_reset_jwt_subject = "passwordreset"
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/access-token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
 
 def generate_password_reset_token(email):
@@ -43,10 +45,9 @@ def verify_password_reset_token(token) -> Optional[str]:
 
 
 async def get_current_user(token: str = Security(oauth2_scheme)):
-    credentials_exception = HTTPException(
+    credentials_exception = APIException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
     )
 
     try:
@@ -55,11 +56,16 @@ async def get_current_user(token: str = Security(oauth2_scheme)):
         if username is None:
             raise credentials_exception
         token_data = JWTTokenData(username=username)
+    except ExpiredSignatureError:
+        credentials_exception.detail = "Token expired"
+        raise credentials_exception
     except JWTError:
         raise credentials_exception
+    
     user = await User.get_by_username(username=token_data.username)
     if user is None:
         raise credentials_exception
+    
     return user
 
 async def get_current_user_optional(token: Optional[str] = Depends(oauth2_scheme)):
