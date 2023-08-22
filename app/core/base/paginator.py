@@ -1,18 +1,9 @@
 from typing import Optional, Type, Any, Dict
 from fastapi import HTTPException, Request
 from tortoise.queryset import QuerySet
-import re
 
 from app.applications.users.models import User
 from .schemas import BaseOutSchema
-
-
-def increment(match):
-    return "page=" + str(int(match.group(1)) + 1)
-
-
-def decrement(match):
-    return "page=" + str(int(match.group(1)) - 1)
 
 
 async def paginate(
@@ -34,14 +25,6 @@ async def paginate(
     ]
 
     return {
-        "links": {
-            "next": re.sub(r"page=(\d+)", increment, str(request.url))
-            if offset + page_size < total
-            else None,
-            "previous": re.sub(r"page=(\d+)", decrement, str(request.url))
-            if page > 1
-            else None,
-        },
         "has_next": offset + page_size < total,
         "count": total,
         "results": page_data,

@@ -17,6 +17,20 @@ class Organisation(BaseDBModel, BaseCreatedUpdatedAtModel, LocationModel):
     banner = fields.CharField(max_length=255, null=True)
 
 
+class Membership(BaseDBModel):
+    class Meta:
+        table = "memberships"
+
+    is_admin = fields.BooleanField(default=False)
+
+    club: fields.ForeignKeyRelation = fields.ForeignKeyField(
+        "models.Club", related_name="memberships"
+    )
+    user: fields.ForeignKeyRelation = fields.ForeignKeyField(
+        "models.User", related_name="memberships"
+    )
+
+
 class Club(Organisation):
     class Meta:
         table = "clubs"
@@ -31,19 +45,9 @@ class Club(Organisation):
         "models.User", related_name="clubs", backward_key="club_id", through="memberships"
     )
 
-
-class Membership(BaseDBModel):
-    class Meta:
-        table = "memberships"
-
-    is_admin = fields.BooleanField(default=False)
-
-    club: fields.ForeignKeyRelation = fields.ForeignKeyField(
-        "models.Club", related_name="memberships"
-    )
-    user: fields.ForeignKeyRelation = fields.ForeignKeyField(
-        "models.User", related_name="memberships"
-    )
+    async def membership_status(self, user):
+        membership: Membership = await Membership.get_or_none(club=self, user=user)
+        return -1 if membership is None else int(membership.is_admin)
 
 
 class Place(Organisation):

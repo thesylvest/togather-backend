@@ -227,21 +227,3 @@ async def get_user_sent_connections(
     ).prefetch_related("to_user")
     return await sent
     # return await paginate(sent, page, page_size, request, UserOut, current_user)
-
-
-@router.get(
-    "/me/events",
-    status_code=200,
-    tags=["users", "events"],
-)
-async def get_user_events(
-    request: Request,
-    page: int = Query(1, ge=1, title="Page number"),
-    page_size: int = Query(10, ge=1, le=100, title="Page size"),
-    current_user: User = Depends(get_current_active_user),
-):
-    """
-    Get current user's events
-    """
-    events = current_user.hosted_events.order_by("-start_date")
-    return await paginate(events, page, page_size, request, EventOut, current_user)

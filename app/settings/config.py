@@ -31,6 +31,7 @@ S3_REGION_NAME = os.getenv("S3_REGION_NAME", "fra1")
 S3_END_POINT = os.getenv("S3_END_POINT", 'https://fra1.digitaloceanspaces.com')
 S3_SPACES_KEY = os.getenv("S3_SPACES_KEY", 'https://fra1.digitaloceanspaces.com')
 S3_SPACES_SECRET = os.getenv("S3_SPACES_SECRET", 'https://fra1.digitaloceanspaces.com')
+S3_BUCKET_NAME = "togather-media"
 
 DB_URL = os.getenv('DATABASE_URL', 'postgres://postgres:postgres@localhost:5432/main')
 

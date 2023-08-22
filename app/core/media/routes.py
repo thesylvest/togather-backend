@@ -19,7 +19,7 @@ s3_client = boto3.Session().client(
 async def upload_file(file: UploadFile = File(...), user: str = Depends(get_current_active_user)):
     s3_client.upload_file(
         file.file,
-        config.BUCKET_NAME,
+        config.S3_BUCKET_NAME,
         file.filename,
         ExtraArgs={'ContentType': file.content_type}
     )
@@ -30,7 +30,7 @@ async def upload_file(file: UploadFile = File(...), user: str = Depends(get_curr
 async def get_file_url(file_id: str):
     url = s3_client.generate_presigned_url(
         'get_object',
-        Params={'Bucket': config.BUCKET_NAME, 'Key': file_id},
+        Params={'Bucket': config.S3_BUCKET_NAME, 'Key': file_id},
         ExpiresIn=3600,  # URL will expire in 1 hour
         Config=Config(signature_version='s3')
     )
