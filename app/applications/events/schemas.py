@@ -36,16 +36,13 @@ class EventCreate(BaseModel):
     form: Optional[dict] = None
     start_date: datetime
     end_date: datetime
-    media: Optional[dict] = None
+    media: Optional[int] = None
     qr_code: Optional[dict] = None
     verification_link: Optional[str] = None
     latitude: float
     longitude: float
     category: Optional[str] = None
     tags: Optional[list[str]] = []
-
-    def create_update_dict(self):
-        return self.dict(exclude_unset=True, exclude={"id"})
 
 
 class EventUpdate(BaseModel):

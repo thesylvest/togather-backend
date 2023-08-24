@@ -4,7 +4,9 @@ from fastapi import Depends
 
 
 class ListStr(str):
-    pass
+    @classmethod
+    def __get_pydantic_core_schema__(cls, handler):
+        return {'type': 'str'}
 
 
 class FilterSet:

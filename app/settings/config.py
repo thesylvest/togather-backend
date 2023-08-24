@@ -28,10 +28,10 @@ LOGS_ROOT = os.path.join(BASE_DIR, "app/logs")
 EMAIL_TEMPLATES_DIR = os.path.join(BASE_DIR, "app/templates/")
 
 S3_REGION_NAME = os.getenv("S3_REGION_NAME", "fra1")
-S3_END_POINT = os.getenv("S3_END_POINT", 'https://fra1.digitaloceanspaces.com')
-S3_SPACES_KEY = os.getenv("S3_SPACES_KEY", 'https://fra1.digitaloceanspaces.com')
-S3_SPACES_SECRET = os.getenv("S3_SPACES_SECRET", 'https://fra1.digitaloceanspaces.com')
-S3_BUCKET_NAME = "togather-media"
+S3_END_POINT = os.getenv("S3_END_POINT", 'https://togather-space.fra1.digitaloceanspaces.com')
+S3_SPACES_KEY = os.getenv("S3_SPACES_KEY", 'XXXXXXXXXXXXXXXXXXXX')
+S3_SPACES_SECRET = os.getenv("S3_SPACES_SECRET", 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+S3_BUCKET_NAME = "media"
 
 DB_URL = os.getenv('DATABASE_URL', 'postgres://postgres:postgres@localhost:5432/main')
 
