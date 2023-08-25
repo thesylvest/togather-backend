@@ -3,12 +3,14 @@ from typing import Optional, Annotated
 
 from fastapi import HTTPException, Security, status, Depends, Body
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError
+from jose import jwt
+from jose.exceptions import ExpiredSignatureError, JWTError
 
-from app.core.auth.schemas import JWTTokenPayload, CredentialsSchema, JWTTokenData, JWTToken
+from app.core.auth.schemas import CredentialsSchema, JWTTokenData
 from app.applications.users.models import User
 from app.core.auth.utils import password
 from app.settings import config
+from app.core.base.exceptions import APIException
 
 from google.oauth2 import id_token
 from google.auth.transport import requests
@@ -51,6 +53,9 @@ async def get_current_user_optional(token: Optional[str] = Security(oauth2_schem
         if username is None:
             return None
         token_data = JWTTokenData(username=username)
+    except ExpiredSignatureError:
+        credentials_exception.detail = "Token expired"
+        raise credentials_exception
     except JWTError:
         return None
     return await User.get_by_username(username=token_data.username)
@@ -64,6 +69,7 @@ async def get_current_user(user: User = Depends(get_current_user_optional)):
     )
     if user is None:
         raise credentials_exception
+    
     return user
 
 
