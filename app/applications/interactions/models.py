@@ -66,3 +66,10 @@ class Hide(BaseDBModel, BaseCreatedAtModel, ContentType):
     hider: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", related_name="hides"
     )
+
+
+class Category(BaseDBModel):
+    class Meta:
+        table = "categories"
+    name = fields.CharField(max_length=255)
+    picture = fields.CharField(max_length=255, null=True)

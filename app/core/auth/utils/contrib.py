@@ -14,7 +14,7 @@ from google.oauth2 import id_token
 from google.auth.transport import requests
 
 password_reset_jwt_subject = "passwordreset"
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/access-token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/access-token", auto_error=False)
 
 
 def generate_password_reset_token(email):
@@ -42,37 +42,43 @@ def verify_password_reset_token(token) -> Optional[str]:
         return None
 
 
-async def get_current_user(token: str = Security(oauth2_scheme)):
+async def get_current_user_optional(token: Optional[str] = Security(oauth2_scheme)):
+    if token is None:
+        return None
+    try:
+        payload = jwt.decode(token, config.SECRET_KEY, algorithms=[config.JWT_ALGORITHM])
+        username: str = payload.get("username")
+        if username is None:
+            return None
+        token_data = JWTTokenData(username=username)
+    except JWTError:
+        return None
+    return await User.get_by_username(username=token_data.username)
+
+
+async def get_current_user(user: User = Depends(get_current_user_optional)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-
-    try:
-        payload = jwt.decode(token, config.SECRET_KEY, algorithms=[config.JWT_ALGORITHM])
-        username: str = payload.get("username")
-        if username is None:
-            raise credentials_exception
-        token_data = JWTTokenData(username=username)
-    except JWTError:
-        raise credentials_exception
-    user = await User.get_by_username(username=token_data.username)
     if user is None:
         raise credentials_exception
     return user
-
-async def get_current_user_optional(token: Optional[str] = Depends(oauth2_scheme)):
-    if token is None:
-        return None
-    
-    return await get_current_user(token)
 
 
 async def get_current_active_user(
     current_user: Annotated[User, Depends(get_current_user)]
 ):
     if not current_user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+
+async def get_current_active_user_optional(
+    current_user: User | None = Depends(get_current_user_optional)
+):
+    if current_user and not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 

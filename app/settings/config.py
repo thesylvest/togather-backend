@@ -27,6 +27,12 @@ BASE_DIR = os.path.abspath(os.path.join(PROJECT_ROOT, os.pardir))
 LOGS_ROOT = os.path.join(BASE_DIR, "app/logs")
 EMAIL_TEMPLATES_DIR = os.path.join(BASE_DIR, "app/templates/")
 
+S3_REGION_NAME = os.getenv("S3_REGION_NAME", "fra1")
+S3_END_POINT = os.getenv("S3_END_POINT", 'https://togather-space.fra1.digitaloceanspaces.com')
+S3_SPACES_KEY = os.getenv("S3_SPACES_KEY", 'XXXXXXXXXXXXXXXXXXXX')
+S3_SPACES_SECRET = os.getenv("S3_SPACES_SECRET", 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+S3_BUCKET_NAME = "media"
+
 DB_URL = os.getenv('DATABASE_URL', 'postgres://postgres:postgres@localhost:5432/main')
 
 # TODO: change secret key with $(openssl rand -hex 32)
@@ -49,10 +55,7 @@ FCM_CREDENTIALS = os.path.join(BASE_DIR, "credentials.json")
 LOGIN_URL = SERVER_HOST + '/api/auth/login/access-token'
 
 CORS_ORIGINS = [
-    "http://localhost",
-    "http://localhost:8080",
-    "http://localhost:5000",
-    "http://localhost:3000",
+    "http://localhost"
 ]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = ["*"]
