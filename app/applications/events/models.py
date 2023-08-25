@@ -33,6 +33,15 @@ class Event(BaseDBModel, BaseCreatedAtModel, LocationModel):
     category: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.Category", related_name="events", null=True
     )
+    attendees: fields.ManyToManyRelation = fields.ManyToManyField(
+        "models.User", related_name="attended_events"
+    )
+
+    async def is_host(self, user) -> bool:
+        if self.host_club:
+            status = await self.host_club.membership_status(user)
+            return status == 1
+        return self.host_user == user
 
 
 class FormResponse(BaseDBModel, BaseCreatedAtModel):
@@ -46,12 +55,3 @@ class FormResponse(BaseDBModel, BaseCreatedAtModel):
     user: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", related_name="form_responses"
     )
-
-
-class Category(BaseDBModel):
-    class Meta:
-        table = "categories"
-    name = fields.CharField(max_length=255)
-    picture = fields.CharField(max_length=255, null=True)
-
-    events = fields.ReverseRelation
