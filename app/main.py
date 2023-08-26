@@ -52,10 +52,10 @@ register_tortoise(
 
 Tortoise.init_models(app_list, "models")
 # these imports must be after init models call
-from app.applications.interactions.routes import notification_router, category_router
 from app.applications.organisations.routes import club_router, place_router
 from app.applications.events.routes import router as events_router
 from app.applications.users.routes import router as users_router
+from app.applications.interactions.routes import router
 from app.core.auth.routes import router as auth_router
 from app.core.fcm.routes import router as fcm_router
 
@@ -63,8 +63,7 @@ app.add_exception_handler(APIException, on_api_exception)
 app.include_router(auth_router, prefix='/api/auth')
 app.include_router(users_router, prefix='/api/users')
 app.include_router(events_router, prefix='/api/events')
-app.include_router(category_router, prefix='/api/categories')
-app.include_router(notification_router, prefix='/api/notifications')
+app.include_router(router, prefix='/api')
 app.include_router(fcm_router, prefix='/api/fcm')
 app.include_router(club_router, prefix='/api/clubs')
 app.include_router(place_router, prefix="/api/places")

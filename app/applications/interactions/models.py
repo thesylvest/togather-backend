@@ -44,18 +44,12 @@ class Notification(BaseDBModel, BaseCreatedAtModel, ContentType):
         return {"computed": "not compute"}
 
 
-class Tag(BaseDBModel, ContentType):
-    class Meta:
-        table = "tags"
-    name = fields.CharField(max_length=255)
-
-
 class Report(BaseDBModel, BaseCreatedAtModel, ContentType):
     class Meta:
         table = "reports"
     reason = fields.CharField(max_length=512)
 
-    repoter: fields.ForeignKeyRelation = fields.ForeignKeyField(
+    reporter: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", related_name="reports"
     )
 
@@ -66,6 +60,21 @@ class Hide(BaseDBModel, BaseCreatedAtModel, ContentType):
     hider: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", related_name="hides"
     )
+
+
+class Rate(BaseDBModel, BaseCreatedAtModel, ContentType):
+    class Meta:
+        table = "rates"
+    rate = fields.FloatField()
+    rater: fields.ForeignKeyRelation = fields.ForeignKeyField(
+        "models.User", related_name="rates"
+    )
+
+
+class Tag(BaseDBModel, ContentType):
+    class Meta:
+        table = "tags"
+    name = fields.CharField(max_length=255)
 
 
 class Category(BaseDBModel):

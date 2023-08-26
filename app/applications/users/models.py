@@ -17,7 +17,17 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
 
     class PydanticMeta:
         backward_relations = False
-        exclude = ("password_hash", "clubs", "hosted_events", "place", "notifications", "is_superuser", "is_active")
+        exclude = (
+            "password_hash",
+            "email",
+            "clubs",
+            "hosted_events",
+            "attended_events",
+            "places",
+            "notifications",
+            "is_superuser",
+            "is_active",
+        )
     username = fields.CharField(max_length=50, unique=True)
     email = fields.CharField(max_length=255, unique=True)
     first_name = fields.CharField(max_length=50, null=True)
@@ -43,6 +53,7 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
     hides: fields.ReverseRelation
     devices: fields.ReverseRelation
     hosted_events: fields.ManyToManyRelation
+    attended_events: fields.ManyToManyRelation
     places: fields.ManyToManyRelation
     notifications: fields.ManyToManyRelation
     clubs: fields.ManyToManyRelation

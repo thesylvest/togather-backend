@@ -14,5 +14,10 @@ class ContentType:
     item_id = fields.IntField()
 
     async def get_item(self):
-        Model = Tortoise.get_model(self.item_type)
-        return Model, await Model.get(id=self.item_id)
+        Model = Tortoise.apps.get("models")[self.item_type]
+        return Model, await Model.get_or_none(id=self.item_id)
+
+    @classmethod
+    async def get_by_item(cls, item):
+        print(item.__class__.__name__)
+        return cls.filter(item_id=item.id, item_type=item.__class__.__name__)

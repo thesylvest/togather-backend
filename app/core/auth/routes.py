@@ -35,7 +35,7 @@ import google_auth_oauthlib.flow
 router = APIRouter()
 
 
-@router.post("/token", response_model=JWTToken, tags=["auth"])
+@router.post("/access-token", response_model=JWTToken, tags=["auth"])
 async def login_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     response: Response,
@@ -75,7 +75,7 @@ async def login_access_token(
     }
 
 
-@router.get("/refresh", response_model=JWTToken, tags=["auth"])
+@router.get("/refresh-token", response_model=JWTToken, tags=["auth"])
 async def refresh_token(request: Request):
     token = request.cookies.get("refresh_token")
     if token is None:

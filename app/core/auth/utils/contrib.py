@@ -53,9 +53,6 @@ async def get_current_user_optional(token: Optional[str] = Security(oauth2_schem
         if username is None:
             return None
         token_data = JWTTokenData(username=username)
-    except ExpiredSignatureError:
-        credentials_exception.detail = "Token expired"
-        raise credentials_exception
     except JWTError:
         return None
     return await User.get_by_username(username=token_data.username)
@@ -69,7 +66,6 @@ async def get_current_user(user: User = Depends(get_current_user_optional)):
     )
     if user is None:
         raise credentials_exception
-    
     return user
 
 
@@ -121,6 +117,7 @@ async def authenticate(credentials: CredentialsSchema) -> Optional[User]:
         await user.save()
 
     return user
+
 
 def decode_google_token(token):
     try:
