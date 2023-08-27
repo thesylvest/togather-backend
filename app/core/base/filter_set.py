@@ -80,19 +80,19 @@ class FilterSet:
     def dependency(cls):
         def item_filter(
                 search_text: str = None,
+                get_blocked: str = None,
                 query_params: cls.Parameters = Depends(),
                 function_filters: cls.FunctionFilters = Depends(),
                 current_user=Depends(get_current_active_user_optional)
         ):
-            if current_user:  # TODO: add blocked user filter too
-                queryset = cls.model.filter(
-                    ~Q(id__in=Subquery(Hide.filter(
-                        hider=current_user,
-                        item_type=cls.model.__name__
-                    ).values_list("item_id", flat=True)))
-                )
-            else:
+            if not current_user:
                 queryset = cls.model.all()
+            else:
+                hide_filter = Q(id__in=Subquery(Hide.filter(hider=current_user, item_type=cls.model.__name__).values("item_id")))
+                if get_blocked is None:  # TODO: add blocked user filter too
+                    queryset = cls.model.filter(~hide_filter)
+                else:
+                    queryset = cls.model.filter(hide_filter)
             filtered_query = cls.apply_filters(query_params, queryset)
             searched_query = cls.search(search_text, filtered_query)
             function_query = cls.apply_function_filters(function_filters, searched_query, current_user)

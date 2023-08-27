@@ -5,6 +5,7 @@ from app.core.auth.utils.contrib import get_current_active_user
 from app.applications.users.models import User
 from app.core.base.paginator import paginate
 from .models import Category, Hide, Report
+from .utils import HideFilter
 
 router = APIRouter()
 
@@ -28,11 +29,12 @@ async def get_hidden(
     page: int = Query(1, ge=1, title="Page number"),
     page_size: int = Query(10, ge=1, le=100, title="Page size"),
     current_user: User = Depends(get_current_active_user),
+    hidden=Depends(HideFilter.dependency())
 ):
     """
     Retrieve hidden items of me.
     """
-    return await paginate(Hide.filter(hider=current_user), page, page_size, request, HideOut, current_user)
+    return await paginate(hidden, page, page_size, request, HideOut, current_user)
 
 
 @router.post("/hides", tags=["inform"], status_code=200)

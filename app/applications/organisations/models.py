@@ -59,7 +59,7 @@ class Place(Organisation):
     advertisements: fields.ReverseRelation
 
     owners: fields.ManyToManyRelation = fields.ManyToManyField(
-        "models.User", related_name="place", backward_key="place_id", through="ownerships"
+        "models.User", related_name="places", backward_key="place_id", through="ownerships"
     )
 
 

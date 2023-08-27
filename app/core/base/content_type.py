@@ -10,6 +10,7 @@ class ContentType:
         event = "Event"
         club = "Club"
         place = "Place"
+        hide = "Hide"
     item_type = fields.CharEnumField(enum_type=ModelType)
     item_id = fields.IntField()
 

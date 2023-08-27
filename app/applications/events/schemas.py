@@ -11,10 +11,7 @@ from .models import Event, Attendee
 
 
 class EventOut(BaseOutSchema):
-    pydantic_model = pydantic_model_creator(
-        Event,
-        exclude=["media", "qr_code", "verification_link"]
-    )
+    pydantic_model = pydantic_model_creator(Event)
 
     @staticmethod
     async def rate(item: Event):
@@ -47,7 +44,9 @@ class EventOut(BaseOutSchema):
     @classmethod
     async def add_fields(cls, item: Event, user):
         return {
-            "allowed_actions": await EventOut.allowed_actions(item, user),
+            "request_data": {
+                "allowed_actions": await EventOut.allowed_actions(item, user),
+            },
             "tags": await EventOut.tags(item),
             "media": await EventOut.media(item),
             "rate": await EventOut.rate(item)

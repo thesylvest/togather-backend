@@ -40,7 +40,7 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
     gender = fields.CharField(max_length=10, null=True)
     social_links = fields.JSONField(null=True)
     birth_date = fields.DateField(null=True)
-    profile_picture = fields.CharField(max_length=255, null=True)
+    media = fields.JSONField(null=True)
     unread_notifications = fields.IntField(default=0)
 
     sent_connections: fields.ReverseRelation
@@ -52,6 +52,7 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
     reports: fields.ReverseRelation
     hides: fields.ReverseRelation
     devices: fields.ReverseRelation
+    memberships: fields.ReverseRelation
     hosted_events: fields.ManyToManyRelation
     attended_events: fields.ManyToManyRelation
     places: fields.ManyToManyRelation
@@ -88,6 +89,13 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
 
 
 class Connection(BaseDBModel):
+    class Status:
+        me = -1
+        not_connected = 0
+        request_sent = 1
+        request_received = 2
+        connected = 3
+
     class Meta:
         table = "connections"
     is_accepted = fields.BooleanField(default=False)
