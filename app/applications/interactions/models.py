@@ -1,5 +1,6 @@
 from tortoise import fields
 from enum import Enum
+import asyncio
 
 from app.core.base.content_type import ContentType
 from app.core.base.models import (
@@ -47,7 +48,7 @@ class Notification(BaseDBModel, BaseCreatedAtModel, ContentType):
 class Report(BaseDBModel, BaseCreatedAtModel, ContentType):
     class Meta:
         table = "reports"
-    reason = fields.CharField(max_length=512)
+    reason = fields.TextField()
 
     reporter: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", related_name="reports"
@@ -82,3 +83,15 @@ class Category(BaseDBModel):
         table = "categories"
     name = fields.CharField(max_length=255)
     picture = fields.CharField(max_length=255, null=True)
+
+    follower: fields.ManyToManyRelation = fields.ManyToManyField(
+        "models.User", related_name="categories", backward_key="category_id"
+    )
+
+
+async def init_category(i):
+    await Category.get_or_create(name=f"cat{i}", picture=None)
+
+for i in range(10):
+    loop = asyncio.get_event_loop()
+    asyncio.run_coroutine_threadsafe(init_category(i), loop)

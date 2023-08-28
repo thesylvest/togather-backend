@@ -19,14 +19,13 @@ class Event(BaseDBModel, BaseCreatedAtModel, LocationModel):
             "media",
             "attendees",
         )
-    name = fields.CharField(max_length=255)
+    name = fields.CharField(max_length=255, unique=True)
     description = fields.TextField()
     links = fields.JSONField(null=True)
     form = fields.JSONField(null=True)
     start_date = fields.DatetimeField()
     end_date = fields.DatetimeField()
     media = fields.JSONField(null=True)
-    qr_code = fields.JSONField(null=True)
     verification_link = fields.CharField(max_length=255, null=True)
 
     responses: fields.ReverseRelation

@@ -4,10 +4,10 @@ services:
   web:
     build: .
     volumes:
-      - ./init_script.sh:/init_script.sh
+      - ./init_backend.sh:/init_backend.sh
       - ./app:/app/app
       - ./migrations:/app/migrations
-    entrypoint: sh -c "/init_script.sh"
+    entrypoint: sh -c "/init_backend.sh"
     restart: on-failure
     ports:
       - 8000:8000

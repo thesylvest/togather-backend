@@ -1,12 +1,16 @@
-from fastapi import APIRouter, Request, Depends, Query, HTTPException
+from jose.exceptions import ExpiredSignatureError, JWTClaimsError, JWTError
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import RedirectResponse
+from datetime import timezone
 
 from app.core.auth.utils.contrib import get_current_active_user, get_current_active_user_optional
 from .schemas import EventOut, EventCreate, EventUpdate, AttendeeOut, AttendeeCreate, EventRate
 from app.core.base.utils import get_object_or_404, has_permission
+from app.core.auth.utils.jwt import encode_jwt, decode_jwt
 from app.applications.interactions.models import Tag, Rate
 from .utils import EventFilter, AttendeeFilter
 from app.applications.users.models import User
-from app.core.base.paginator import paginate
+from app.core.base.paginator import Paginator
 from app.core.base.media_manager import S3
 from .models import Event, Attendee
 
@@ -15,13 +19,11 @@ router = APIRouter()
 
 @router.get("/", tags=["events"], status_code=200)
 async def get_events(
-    request: Request,
-    page: int = Query(1, ge=1, title="Page number"),
-    page_size: int = Query(10, ge=1, title="Page size"),
+    paginator: Paginator = Depends(),
     current_user: User | None = Depends(get_current_active_user_optional),
     events=Depends(EventFilter.dependency())
 ):
-    return await paginate(events, page, page_size, request, EventOut, current_user)
+    return await paginator.paginate(events, EventOut, current_user)
 
 
 @router.get("/{id}", tags=["events"], status_code=200)
@@ -38,15 +40,23 @@ async def create_event(
     event_in: EventCreate,
     current_user: User = Depends(get_current_active_user),
 ):
-    urls, media = zip(*[await S3.upload_file(file_type) for file_type in event_in.media])
+    urls, media = zip(*[await S3.upload_file(file_dict["file_type"]) for file_dict in event_in.media])
+
+    jwt = encode_jwt({
+        "id": event_in.name,
+        "nbf": event_in.start_date.replace(tzinfo=timezone.utc).timestamp(),
+        "exp": event_in.end_date.replace(tzinfo=timezone.utc).timestamp()
+    })
+
     event = await Event.create(
         **event_in.dict(exclude_unset=True, exclude=["media"]),
         host_user=current_user,
-        media=media
+        media=media,
+        verification_link=jwt,
     )
 
     for tag in event_in.tags:
-        await Tag.create(name=tag, item_id=event.id, item_type=Tag.ModelType.event)
+        await Tag.create(name=tag, item_id=event.id, item_type="Event")
     return {
         "created": event,
         "media_upload": urls
@@ -63,12 +73,16 @@ async def update_event(
     await has_permission(event.is_host, current_user)
 
     urls = []
-    if event_in.media:
-        for media_dict in event_in.media:
-            url, event.media[media_dict["no"]] = await S3.upload_file(media_dict["file_type"])
+    media = []
+    for media_dict in event_in.media:
+        if media_dict.get("name", None) not in event.media:
+            url, name = await S3.upload_file(media_dict["file_type"])
             urls.append(url)
+        else:
+            name = media_dict["name"]
+        media.append(name)
 
-    await event.update_from_dict(**event_in.dict(exclude_none=True))
+    await event.update_from_dict(**event_in.dict(exclude_none=True), media=media)
 
     if event_in.tags:
         for tag in await Tag.filter(item_id=id, item_type=Tag.ModelType.event):
@@ -117,7 +131,7 @@ async def attend(
     current_user: User = Depends(get_current_active_user),
 ):
     event: Event = await get_object_or_404(Event, id=id)
-    if await event.attendees.exists(id=current_user.id):
+    if await event.attendees.filter(id=current_user.id).exists():
         await event.attendees.remove(current_user)
         return {"message": "successfully unattending"}
     if event.form:
@@ -127,7 +141,7 @@ async def attend(
                 detail="Form is needed"
             )
     await Attendee.create(
-        form_data=form_data,
+        form_data=form_data.dict()["form_data"],
         user=current_user,
         event=event
     )
@@ -149,8 +163,8 @@ async def verify_user(
     return {"verification status": attendee.is_verified}
 
 
-@router.get("/{id}/verification", tags=["events"], status_code=200)
-async def verification(
+@router.get("/{id}/verify", tags=["events"], status_code=200)
+async def get_verification(
     id: int,
     current_user: User = Depends(get_current_active_user),
 ):
@@ -158,21 +172,43 @@ async def verification(
     await has_permission(event.is_host, current_user)
 
     return {
-        "qr_code": event.qr_code,
         "verification_link": event.verification_link
     }
 
 
+@router.get("/verify/{token}", tags=["events"], status_code=200)
+async def verify(
+    token: str,
+    current_user: User = Depends(get_current_active_user_optional),
+):
+    if not current_user:
+        return RedirectResponse(url=f"/api/auth/login/?redirect_url=/api/events/verify/{token}")  # TODO: implement this login url with redirect capabilities
+    try:
+        payload = decode_jwt(token)
+    except ExpiredSignatureError:
+        return HTTPException(status_code=401, detail="link has been expired")
+    except JWTClaimsError:
+        return HTTPException(status_code=401, detail="link has not been activated")
+    except JWTError:
+        return HTTPException(status_code=401, detail="link is wrong")
+    event: Event = get_object_or_404(Event, name=payload["name"])
+    attend: Attendee = Attendee.get_or_none(event=event, user=current_user)
+    if attend:
+        attend.is_verified = True
+        attend.save()
+    else:
+        attend: Attendee = await Attendee.create(event=event, user=current_user, is_verified=True)
+    return attend
+
+
 @router.get("/{event_id}/forms", tags=["events"], status_code=200)
 async def get_forms(
-    request: Request,
     event_id: int,
-    page: int = Query(1, ge=1, title="Page number"),
-    page_size: int = Query(10, ge=1, title="Page size"),
+    paginator: Paginator = Depends(),
     current_user: User | None = Depends(get_current_active_user),
     forms=Depends(AttendeeFilter.dependency())
 ):
-    return await paginate(forms, page, page_size, request, AttendeeOut, current_user)
+    return await paginator.paginate(forms, AttendeeOut, current_user)
 
 
-# join, verify, qr code, hide, report, filter by hide and block, tag system embedded to text(
+#  filter by hide and block, tag system embedded to text

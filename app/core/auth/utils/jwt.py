@@ -1,40 +1,36 @@
-from datetime import datetime, timedelta
-from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
+from datetime import datetime, timedelta
 from fastapi import status
+from jose import jwt
 
-from app.settings import config
 from app.core.base.exceptions import APIException
+from app.settings import config
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def encode_jwt(data: dict):
+    return jwt.encode(data, config.SECRET_KEY, config.JWT_ALGORITHM)
+
+
+def decode_jwt(token: str):
+    return jwt.decode(token, config.SECRET_KEY, config.JWT_ALGORITHM)
+
+
+def create_access_token(
+    data: dict,
+    expires_delta: timedelta | None = timedelta(minutes=config.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
+):
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(
-            minutes=config.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
-        )
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(
-        to_encode, config.SECRET_KEY, algorithm=config.JWT_ALGORITHM
-    )
-    return encoded_jwt
+    to_encode.update({"exp": datetime.utcnow() + expires_delta})
+    return encode_jwt(to_encode)
 
 
-def create_refresh_token(data: dict, expires_delta: timedelta | None = None):
+def create_refresh_token(
+    data: dict,
+    expires_delta: timedelta | None = timedelta(minutes=config.JWT_REFRESH_TOKEN_EXPIRE_MINUTES)
+):
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(
-            minutes=config.JWT_REFRESH_TOKEN_EXPIRE_MINUTES
-        )
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(
-        to_encode, config.SECRET_KEY, algorithm=config.JWT_ALGORITHM
-    )
-    return encoded_jwt
+    to_encode.update({"exp": datetime.utcnow() + expires_delta})
+    return encode_jwt(to_encode)
 
 
 def create_access_token_from_refresh_token(token: str):

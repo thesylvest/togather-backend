@@ -1,4 +1,5 @@
-from tortoise.expressions import Subquery, Q
+from tortoise.expressions import Q, Subquery
+from tortoise.functions import Sum
 from datetime import datetime
 from typing import Optional
 
@@ -21,6 +22,7 @@ class UserFilter(FilterSet):
         hosted_events: Optional[int] = None
         attended_events: Optional[int] = None
         places: Optional[int] = None
+        clubs: Optional[int] = None
 
     class SearchFields(FilterSet.SearchFields):
         username: str
@@ -30,6 +32,13 @@ class UserFilter(FilterSet):
 
     class FunctionFilters(FilterSet.FunctionFilters):
         connections: Optional[int] = None
+        rated_post: Optional[int] = None
+        rated_comment: Optional[int] = None
+        rated_event: Optional[int] = None
+        club_admins: Optional[int] = None
+        club_members: Optional[int] = None
+        verified_attendees: Optional[int] = None
+        unverified_attendees: Optional[int] = None
 
     class Functions(FilterSet.Functions):
         @staticmethod
@@ -38,3 +47,37 @@ class UserFilter(FilterSet):
                 Q(id__in=Subquery(Connection.filter(is_accepted=True, from_user_id=value).values('to_user_id'))) |
                 Q(id__in=Subquery(Connection.filter(is_accepted=True, to_user_id=value).values('from_user_id')))
             )
+
+        @staticmethod
+        def club_admins(value: int, queryset, user):
+            return queryset.filter(memberships__club_id=value, memberships__is_admin=True)
+
+        @staticmethod
+        def club_members(value: int, queryset, user):
+            return queryset.filter(memberships__club_id=value, memberships__is_admin=False)
+
+        @staticmethod
+        def verified_attendees(value: int, queryset, user):
+            return queryset.filter(attendance__event_id=value, attendance__is_verified=True)
+
+        @staticmethod
+        def unverified_attendees(value: int, queryset, user):
+            return queryset.filter(attendance__event_id=value, attendance__is_verified=False)
+
+        @staticmethod
+        def rated(value: int, item_type: str, queryset, user):
+            return queryset.filter(rates__item_type=item_type, rates__item_id=value).annotate(
+                rate=Sum("rates__rate", _filter=Q(rates__item_type=item_type, rates__item_id=value))
+            )
+
+        @staticmethod
+        def rated_post(value: int, queryset, user):
+            return UserFilter.Functions.rated(value, "Post", queryset, user)
+
+        @staticmethod
+        def rated_comment(value: int, queryset, user):
+            return UserFilter.Functions.rated(value, "Comment", queryset, user)
+
+        @staticmethod
+        def rated_event(value: int, queryset, user):
+            return UserFilter.Functions.rated(value, "Event", queryset, user)

@@ -25,16 +25,15 @@ app.add_middleware(
     allow_headers=config.CORS_ALLOW_HEADERS,
 )
 
-app_list = [f'{config.APPLICATIONS_MODULE}.{app}.models' for app in config.APPLICATIONS]\
-    + [f'{config.CORE_APPLICATIONS_MODULE}.{app}.models' for app in config.CORE_APPLICATIONS]
-app_list.append('aerich.models')
+app.add_exception_handler(APIException, on_api_exception)
+
 tortoise_config = {
     'connections': {
         'default': config.DB_URL
     },
     'apps': {
         'models': {
-            'models': app_list,
+            'models': config.APP_LIST,
             'default_connection': 'default',
         }
     }
@@ -45,12 +44,12 @@ initialize_app(credentials.Certificate(config.FCM_CREDENTIALS))
 register_tortoise(
     app,
     db_url=config.DB_URL,
-    modules={'models': app_list},
+    modules={'models': config.APP_LIST},
     generate_schemas=True,
     add_exception_handlers=True,
 )
 
-Tortoise.init_models(app_list, "models")
+Tortoise.init_models(config.APP_LIST, "models")
 # these imports must be after init models call
 from app.applications.organisations.routes import club_router, place_router
 from app.applications.events.routes import router as events_router
@@ -59,7 +58,6 @@ from app.applications.interactions.routes import router
 from app.core.auth.routes import router as auth_router
 from app.core.fcm.routes import router as fcm_router
 
-app.add_exception_handler(APIException, on_api_exception)
 app.include_router(auth_router, prefix='/api/auth')
 app.include_router(users_router, prefix='/api/users')
 app.include_router(events_router, prefix='/api/events')

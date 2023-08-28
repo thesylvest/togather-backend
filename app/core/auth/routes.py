@@ -40,10 +40,7 @@ async def login_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     response: Response,
 ):
-    user = await User.get_by_username(username=form_data.username)
-    credentials = CredentialsSchema(
-        username=form_data.username, password=form_data.password, email=user.email
-    )
+    credentials = CredentialsSchema(username=form_data.username, password=form_data.password)
     user = await authenticate(credentials)
     if user:
         await update_last_login(user.id)
@@ -97,7 +94,7 @@ async def recover_password(email: str, background_tasks: BackgroundTasks):
     """
     Password Recovery
     """
-    user = await User.get_by_email(email=email)
+    user = await User.get_or_none(email=email)
 
     if not user:
         raise HTTPException(
@@ -117,7 +114,7 @@ async def recover_password(email: str, background_tasks: BackgroundTasks):
     return {"msg": "Password recovery email sent"}
 
 
-@router.post("/reset-password/", tags=["auth"], response_model=Msg)
+@router.post("/reset-password", tags=["auth"], response_model=Msg)
 async def reset_password(token: str = Body(...), new_password: str = Body(...)):
     """
     Reset password
@@ -128,7 +125,7 @@ async def reset_password(token: str = Body(...), new_password: str = Body(...)):
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token"
         )
 
-    user = await User.get_by_email(email=email)
+    user = await User.get_or_none(email=email)
     if not user:
         raise HTTPException(
             status_code=404,
@@ -147,14 +144,14 @@ async def reset_password(token: str = Body(...), new_password: str = Body(...)):
 
 @router.post("/register", response_model=JWTToken, tags=["auth"])
 async def register_user(user_in: CredentialsSchema, background_tasks: BackgroundTasks):
-    user = await User.get_by_email(email=user_in.email)
+    user = await User.get_or_none(email=user_in.email)
     if user:
         raise HTTPException(
             status_code=400,
             detail="A user with this email already exists in the system.",
         )
 
-    user = await User.get_by_username(username=user_in.username)
+    user = await User.get_or_none(username=user_in.username)
     if user:
         raise HTTPException(
             status_code=400,
@@ -242,7 +239,7 @@ async def login_google_callback(request: Request):
         raise HTTPException(status_code=401, detail="Invalid Google token")
 
     # Process the decoded_info dictionary and return relevant user information
-    user = await User.get_by_email(email=decoded_info["email"])
+    user = await User.get_or_none(email=decoded_info["email"])
 
     if user:
         await update_last_login(user.id)

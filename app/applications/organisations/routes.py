@@ -1,24 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException
 
-from app.applications.organisations.models import (
-    Club,
-    Place,
-    Membership,
-    Advertisement,
-    Ownership,
-)
-from app.applications.organisations.schemas import (
-    ClubOut,
-    PlaceOut,
-    ClubIn,
-    PlaceIn,
-    AdvertisementIn,
-    ClubMembersOut,
-)
+from .schemas import ClubOut, PlaceOut, ClubIn, PlaceIn, AdvertisementIn
+from .models import Club, Place, Membership, Advertisement, Ownership
 from app.core.auth.utils.contrib import get_current_active_user
-from app.applications.users.schemas import UserOut
 from app.applications.users.models import User
-from app.core.base.paginator import paginate
+from app.core.base.paginator import Paginator
 
 
 club_router, place_router = APIRouter(), APIRouter()
@@ -26,26 +12,22 @@ club_router, place_router = APIRouter(), APIRouter()
 
 @club_router.get("", tags=["clubs"])
 async def get_clubs(
-    request: Request,
-    page: int = Query(1, ge=1, title="Page number"),
-    page_size: int = Query(10, ge=1, le=100, title="Page size"),
+    paginator: Paginator = Depends(),
     current_user: User = Depends(get_current_active_user),
 ):
     """Get all clubs."""
     clubs = Club.all()
-    return await paginate(clubs, page, page_size, request, ClubOut, current_user)
+    return await paginator.paginate(clubs, ClubOut, current_user)
 
 
 @place_router.get("", tags=["places"])
 async def get_places(
-    request: Request,
-    page: int = Query(1, ge=1, title="Page number"),
-    page_size: int = Query(10, ge=1, le=100, title="Page size"),
+    paginator: Paginator = Depends(),
     current_user: User = Depends(get_current_active_user),
 ):
     """Get all clubs."""
     places = Place.all()
-    return await paginate(places, page, page_size, request, PlaceOut, current_user)
+    return await paginator.paginate(places, PlaceOut, current_user)
 
 
 @club_router.get("/{club_id}", tags=["clubs"])
@@ -70,40 +52,6 @@ async def get_place(
     if not place:
         raise HTTPException(status_code=404, detail="Place not found")
     return PlaceOut.serialize(place, current_user)
-
-
-@club_router.get("/{club_id}/members", tags=["clubs"])
-async def get_club_members(
-    club_id: int,
-    request: Request,
-    page: int = Query(1, ge=1, title="Page number"),
-    page_size: int = Query(10, ge=1, le=100, title="Page size"),
-    current_user: User = Depends(get_current_active_user),
-):
-    """Get all members of a club."""
-    club = await Club.get_or_none(id=club_id)
-    if not club:
-        raise HTTPException(status_code=404, detail="Club not found")
-
-    members = Membership.filter(club=club)
-    return await paginate(members, page, page_size, request, ClubMembersOut, current_user)
-
-
-@club_router.get("/{club_id}/admins", tags=["clubs"])
-async def get_club_admins(
-    club_id: int,
-    request: Request,
-    page: int = Query(1, ge=1, title="Page number"),
-    page_size: int = Query(10, ge=1, le=100, title="Page size"),
-    current_user: User = Depends(get_current_active_user),
-):
-    """Get all admins of a club."""
-    club = await Club.get_or_none(id=club_id)
-    if not club:
-        raise HTTPException(status_code=404, detail="Club not found")
-
-    members = Membership.filter(club=club, is_admin=True)
-    return await paginate(members, page, page_size, request, ClubMembersOut, current_user)
 
 
 @club_router.post("/{club_id}/admins/{user_id}", tags=["clubs"])
@@ -146,9 +94,7 @@ async def add_club_admin(
 @place_router.get("/{place_id}/ads", tags=["places"])
 async def get_place_ads(
     place_id: int,
-    request: Request,
-    page: int = Query(1, ge=1, title="Page number"),
-    page_size: int = Query(10, ge=1, le=100, title="Page size"),
+    paginator: Paginator = Depends(),
     current_user: User = Depends(get_current_active_user),
 ):
     """Get all ads of a place."""
@@ -175,23 +121,6 @@ async def add_place_ad(
         "message": "Ad added successfully.",
         "ad": ad,
     }
-
-
-@place_router.get("/{place_id}/owners", tags=["places"])
-async def get_place_owners(
-    place_id: int,
-    request: Request,
-    page: int = Query(1, ge=1, title="Page number"),
-    page_size: int = Query(10, ge=1, le=100, title="Page size"),
-    current_user: User = Depends(get_current_active_user),
-):
-    """Get all owners of a place."""
-    place = await Place.get_or_none(id=place_id)
-    if not place:
-        raise HTTPException(status_code=404, detail="Place not found")
-
-    owners = place.owners.all()
-    return await paginate(owners, page, page_size, request, UserOut, current_user)
 
 
 @place_router.post("/{place_id}/owners/{user_id}", tags=["places"])

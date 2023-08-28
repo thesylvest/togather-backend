@@ -1,8 +1,4 @@
-from tortoise.contrib.pydantic import pydantic_model_creator
 from pydantic import BaseModel
-
-from app.core.base.schemas import BaseOutSchema
-from app.core.fcm.models import FCMDevice
 
 
 class RegisterDeviceIn(BaseModel):
@@ -15,7 +11,3 @@ class RegisterDeviceIn(BaseModel):
 class RegisterDeviceOut(BaseModel):
     device: str
     created: bool
-
-
-class DeviceOut(BaseOutSchema):
-    pydantic_model = pydantic_model_creator(FCMDevice)

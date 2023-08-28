@@ -1,6 +1,3 @@
-from typing import Optional
-
-from tortoise.exceptions import DoesNotExist
 from tortoise import fields
 
 from app.core.auth.utils import password
@@ -27,6 +24,9 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
             "notifications",
             "is_superuser",
             "is_active",
+            "unread_notifications",
+            "blocked_user",
+            "blocked_by",
         )
     username = fields.CharField(max_length=50, unique=True)
     email = fields.CharField(max_length=255, unique=True)
@@ -42,10 +42,10 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
     birth_date = fields.DateField(null=True)
     media = fields.JSONField(null=True)
     unread_notifications = fields.IntField(default=0)
+    private_profile = fields.BooleanField(default=False)
 
     sent_connections: fields.ReverseRelation
     received_connections: fields.ReverseRelation
-    blocked_users: fields.ReverseRelation
     posts: fields.ReverseRelation
     comments: fields.ReverseRelation
     form_responses: fields.ReverseRelation
@@ -58,26 +58,15 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
     places: fields.ManyToManyRelation
     notifications: fields.ManyToManyRelation
     clubs: fields.ManyToManyRelation
+    categories: fields.ManyToManyRelation
+    blocked_by: fields.ManyToManyRelation
 
     university: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.University", related_name="students", null=True
     )
-
-    @classmethod
-    async def get_by_email(cls, email: str) -> Optional["User"]:
-        try:
-            user = await cls.get_or_none(email=email)
-            return user
-        except DoesNotExist:
-            return None
-
-    @classmethod
-    async def get_by_username(cls, username: str) -> Optional["User"]:
-        try:
-            user = await cls.get(username=username)
-            return user
-        except DoesNotExist:
-            return None
+    blocked_users: fields.ManyToManyRelation = fields.ManyToManyField(
+        "models.User", related_name="blocked_by", through="blocked", backward_key="blocking_user_id", forward_key="blocked_user_id"
+    )
 
     @classmethod
     async def create(cls, user) -> "User":
@@ -108,17 +97,6 @@ class Connection(BaseDBModel):
     )
 
 
-class Blocked(BaseDBModel):
-    class Meta:
-        table = "blocked"
-    blocking_user: fields.ForeignKeyRelation = fields.ForeignKeyField(
-        "models.User"
-    )
-    blocked_user: fields.ForeignKeyRelation = fields.ForeignKeyField(
-        "models.User", related_name="blocked_users"
-    )
-
-
 class University(BaseDBModel, LocationModel):
     class Meta:
         table = "universities"
@@ -127,3 +105,14 @@ class University(BaseDBModel, LocationModel):
     clubs: fields.ReverseRelation
     students: fields.ReverseRelation
     events: fields.ReverseRelation
+
+
+class Blocked(BaseDBModel):
+    class Meta:
+        table = "blocked"
+    blocking_user: fields.ForeignKeyRelation = fields.ForeignKeyField(
+        "models.User", related_name="blocking"
+    )
+    blocked_user: fields.ForeignKeyRelation = fields.ForeignKeyField(
+        "models.User", related_name="blocked"
+    )

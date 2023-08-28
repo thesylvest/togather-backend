@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from app.core.base.filter_set import FilterSet, ListStr
+from app.core.base.filter_set import FilterSet
 from .models import Event, Attendee
 
 
@@ -9,7 +9,6 @@ class EventFilter(FilterSet):
     model = Event
 
     class Parameters(FilterSet.Parameters):
-        host_user__id__in: Optional[ListStr] = None
         host_club: Optional[int] = None
         host_user: Optional[int] = None
         attendees: Optional[int] = None

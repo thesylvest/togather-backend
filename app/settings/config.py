@@ -21,6 +21,9 @@ APPLICATIONS = [
 CORE_APPLICATIONS = [
     'fcm'
 ]
+APP_LIST = [f'{APPLICATIONS_MODULE}.{app}.models' for app in APPLICATIONS]\
+    + [f'{CORE_APPLICATIONS_MODULE}.{app}.models' for app in CORE_APPLICATIONS]\
+    + ['aerich.models']
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 BASE_DIR = os.path.abspath(os.path.join(PROJECT_ROOT, os.pardir))

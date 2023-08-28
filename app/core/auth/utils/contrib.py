@@ -1,16 +1,15 @@
 from datetime import datetime, timedelta
 from typing import Optional, Annotated
 
-from fastapi import HTTPException, Security, status, Depends, Body
+from fastapi import HTTPException, Security, Depends, status
 from fastapi.security import OAuth2PasswordBearer
+from jose.exceptions import JWTError
 from jose import jwt
-from jose.exceptions import ExpiredSignatureError, JWTError
 
-from app.core.auth.schemas import CredentialsSchema, JWTTokenData
+from app.core.auth.schemas import CredentialsSchema
 from app.applications.users.models import User
 from app.core.auth.utils import password
 from app.settings import config
-from app.core.base.exceptions import APIException
 
 from google.oauth2 import id_token
 from google.auth.transport import requests
@@ -49,13 +48,12 @@ async def get_current_user_optional(token: Optional[str] = Security(oauth2_schem
         return None
     try:
         payload = jwt.decode(token, config.SECRET_KEY, algorithms=[config.JWT_ALGORITHM])
-        username: str = payload.get("username")
-        if username is None:
+        user_id: str = payload.get("user_id")
+        if user_id is None:
             return None
-        token_data = JWTTokenData(username=username)
     except JWTError:
         return None
-    return await User.get_by_username(username=token_data.username)
+    return await User.get_or_none(id=user_id)
 
 
 async def get_current_user(user: User = Depends(get_current_user_optional)):
@@ -95,10 +93,8 @@ async def get_current_active_superuser(current_user: User = Security(get_current
 
 
 async def authenticate(credentials: CredentialsSchema) -> Optional[User]:
-    if credentials.email:
-        user = await User.get_by_email(credentials.email)
-    elif credentials.username:
-        user = await User.get_by_username(credentials.username)
+    if credentials.username:
+        user = await User.get_or_none(username=credentials.username)
     else:
         return None
 
