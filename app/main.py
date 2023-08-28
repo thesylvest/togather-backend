@@ -39,7 +39,7 @@ tortoise_config = {
     }
 }
 
-initialize_app(credentials.Certificate(config.FCM_CREDENTIALS))
+firebase_app = initialize_app(credentials.Certificate(config.FCM_CREDENTIALS))
 
 register_tortoise(
     app,

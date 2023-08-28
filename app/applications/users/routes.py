@@ -1,18 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from tortoise.expressions import Q
 
-from app.core.auth.utils.contrib import (
-    get_current_active_user_optional,
-    get_current_active_user,
-)
+from app.core.auth.utils.contrib import get_current_active_user_optional, get_current_active_user
+from app.core.base.utils import get_object_or_404, extract_mentions_and_tags, extract_media_files
 from app.applications.interactions.schemas import NotificationOut, ReportOut, HideOut
 from app.applications.interactions.utils import HideFilter, ReportFilter
 from app.core.auth.utils.password import get_password_hash
 from app.applications.interactions.models import Category
 from .schemas import UserOut, UserUpdate, LocationUpdate
-from app.core.base.utils import get_object_or_404
 from app.core.base.paginator import Paginator
-from app.core.base.media_manager import S3
 from .models import User, Connection
 from .utils import UserFilter
 
@@ -30,41 +26,32 @@ async def read_users(
 
 @router.put("/me", status_code=200, tags=["users"])
 async def update_me(
-    user_in: UserUpdate,
+    data: UserUpdate,
+    mentions_and_tags=Depends(extract_mentions_and_tags(UserUpdate, ["bio"])),
     current_user: User = Depends(get_current_active_user)
 ):
-    urls = []
-    media = []
-    for media_dict in user_in.media:
-        if media_dict.get("name", None) not in current_user.media:
-            url, name = await S3.upload_file(media_dict["file_type"])
-            urls.append(url)
-        else:
-            name = media_dict["name"]
-        media.append(name)
+    print(mentions_and_tags)
+    urls, user_dict = extract_media_files(data=data, item=current_user)
 
-    password_hash = get_password_hash(user_in.password) if user_in.password is not None else current_user.password_hash
+    if data.password is not None:
+        user_dict["password_hash"] = get_password_hash(data.password)
 
     for category in await current_user.categories.all():
-        if category.name not in user_in.categories:
+        if category.name not in data.categories:
             await current_user.categories.remove(category)
     try:
         await current_user.categories.remove(
             await Category.filter(
-                ~Q(name__in=user_in.categories) & Q(follower=current_user)
+                ~Q(name__in=data.categories) & Q(follower=current_user)
             )
         )
     except Exception:
         pass
     await current_user.categories.add(
-        await Category.filter(name__in=user_in.categories)
+        await Category.filter(name__in=data.categories)
     )
 
-    await current_user.update_from_dict(
-        **user_in.dict(exclude=["categories"], exclude_none=True),
-        media=media,
-        password_hash=password_hash
-    )
+    await current_user.update_from_dict(user_dict).save()
 
     return await UserOut.serialize(current_user, current_user)
 

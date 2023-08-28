@@ -60,7 +60,7 @@ class EventCreate(BaseModel):
     form: Optional[dict] = None
     start_date: datetime
     end_date: datetime
-    media: Optional[list[str]] = None
+    media: Optional[list[dict]] = None
     latitude: float
     longitude: float
     category_id: int
@@ -75,7 +75,7 @@ class EventUpdate(BaseModel):
     form: Optional[dict] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
-    media: Optional[dict] = None
+    media: Optional[list[dict]] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     category_id: Optional[int] = None

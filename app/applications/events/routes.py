@@ -3,15 +3,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from datetime import timezone
 
+from app.core.base.utils import get_object_or_404, has_permission, extract_mentions_and_tags, extract_media_files
 from app.core.auth.utils.contrib import get_current_active_user, get_current_active_user_optional
 from .schemas import EventOut, EventCreate, EventUpdate, AttendeeOut, AttendeeCreate, EventRate
-from app.core.base.utils import get_object_or_404, has_permission
 from app.core.auth.utils.jwt import encode_jwt, decode_jwt
 from app.applications.interactions.models import Tag, Rate
 from .utils import EventFilter, AttendeeFilter
 from app.applications.users.models import User
 from app.core.base.paginator import Paginator
-from app.core.base.media_manager import S3
 from .models import Event, Attendee
 
 router = APIRouter()
@@ -32,68 +31,60 @@ async def get_event(
     current_user: User = Depends(get_current_active_user_optional),
 ):
     event = await get_object_or_404(Event, id=id)
-    return EventOut.serialize(event, current_user)
+    return await EventOut.serialize(event, current_user)
 
 
 @router.post("/", tags=["events"], status_code=201)
 async def create_event(
-    event_in: EventCreate,
+    data: EventCreate,
+    mentions_and_tags=Depends(extract_mentions_and_tags(EventCreate, ["name", "description"])),
     current_user: User = Depends(get_current_active_user),
 ):
-    urls, media = zip(*[await S3.upload_file(file_dict["file_type"]) for file_dict in event_in.media])
+    print(mentions_and_tags)
+    urls, event_dict = extract_media_files(data=data)
 
     jwt = encode_jwt({
-        "id": event_in.name,
-        "nbf": event_in.start_date.replace(tzinfo=timezone.utc).timestamp(),
-        "exp": event_in.end_date.replace(tzinfo=timezone.utc).timestamp()
+        "id": data.name,
+        "nbf": data.start_date.replace(tzinfo=timezone.utc).timestamp(),
+        "exp": data.end_date.replace(tzinfo=timezone.utc).timestamp()
     })
 
-    event = await Event.create(
-        **event_in.dict(exclude_unset=True, exclude=["media"]),
-        host_user=current_user,
-        media=media,
-        verification_link=jwt,
-    )
+    event = await Event.create(**event_dict, host_user=current_user, verification_link=jwt)
 
-    for tag in event_in.tags:
+    for tag in data.tags:
         await Tag.create(name=tag, item_id=event.id, item_type="Event")
-    return {
-        "created": event,
-        "media_upload": urls
-    }
+    return {"created": event, "media_upload": urls}
 
 
 @router.put("/{id}", tags=["events"], status_code=200)
 async def update_event(
     id: int,
-    event_in: EventUpdate,
+    data: EventUpdate,
+    mentions_and_tags=Depends(extract_mentions_and_tags(EventUpdate, ["name", "description"])),
     current_user: User = Depends(get_current_active_user),
 ):
+    print(mentions_and_tags)
     event: Event = await get_object_or_404(Event, id=id)
     await has_permission(event.is_host, current_user)
 
-    urls = []
-    media = []
-    for media_dict in event_in.media:
-        if media_dict.get("name", None) not in event.media:
-            url, name = await S3.upload_file(media_dict["file_type"])
-            urls.append(url)
-        else:
-            name = media_dict["name"]
-        media.append(name)
+    urls, event_dict = extract_media_files(data=data, item=event)
 
-    await event.update_from_dict(**event_in.dict(exclude_none=True), media=media)
+    if data.start_date != event.start_date or data.end_date != event.end_date:
+        event_dict["verification_link"] = encode_jwt({
+            "id": data.name,
+            "nbf": data.start_date.replace(tzinfo=timezone.utc).timestamp(),
+            "exp": data.end_date.replace(tzinfo=timezone.utc).timestamp()
+        })
 
-    if event_in.tags:
+    await event.update_from_dict(event_dict).save()
+
+    if data.tags:
         for tag in await Tag.filter(item_id=id, item_type=Tag.ModelType.event):
-            if tag.name not in event_in.tags:
+            if tag.name not in data.tags:
                 tag.delete()
-        for tag in event_in.tags:
+        for tag in data.tags:
             await Tag.get_or_create(name=tag, item_id=event.id, item_type=Tag.ModelType.event)
-    return {
-        "updated": event,
-        "media_upload": urls
-    }
+    return {"updated": event, "media_upload": urls}
 
 
 @router.delete("/{id}", tags=["events"], status_code=200)
@@ -116,7 +107,7 @@ async def rate_event(
 ):
     event: Event = await get_object_or_404(Event, id=id)
     try:
-        rate_obj = await (await Rate.get_by_item(item=event)).get(rater=current_user)
+        rate_obj = await current_user.rates.get(item_id=event.id, item_type="Event")
         rate_obj.rate = rate.rate
         await rate_obj.save()
     except Exception:
@@ -141,7 +132,7 @@ async def attend(
                 detail="Form is needed"
             )
     await Attendee.create(
-        form_data=form_data.dict()["form_data"],
+        form_data=form_data.dict().get("form_data", None),
         user=current_user,
         event=event
     )
@@ -171,9 +162,7 @@ async def get_verification(
     event: Event = await get_object_or_404(Event, id=id)
     await has_permission(event.is_host, current_user)
 
-    return {
-        "verification_link": event.verification_link
-    }
+    return {"verification_link": event.verification_link}
 
 
 @router.get("/verify/{token}", tags=["events"], status_code=200)
@@ -209,6 +198,3 @@ async def get_forms(
     forms=Depends(AttendeeFilter.dependency())
 ):
     return await paginator.paginate(forms, AttendeeOut, current_user)
-
-
-#  filter by hide and block, tag system embedded to text

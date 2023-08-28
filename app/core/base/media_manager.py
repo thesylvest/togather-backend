@@ -23,7 +23,7 @@ class S3:
         return re.sub(r'(\w+)\.(\w+)\.digitaloceanspaces\.com', r'\1.\2.cdn.digitaloceanspaces.com', url)
 
     @staticmethod
-    async def upload_file(file_type):
+    def upload_file(file_type):
         filename = f"{uuid.uuid4()}.{file_type}"
         url = S3.client.generate_presigned_post(
             config.S3_BUCKET_NAME,
@@ -36,7 +36,7 @@ class S3:
         return url, filename
 
     @staticmethod
-    async def get_file_url(filename: str):
+    def get_file_url(filename: str):
         return S3.convert_cdn(
             S3.client.generate_presigned_url(
                 'get_object',
