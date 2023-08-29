@@ -19,11 +19,6 @@ class HideOut(BaseOutSchema):
         }
 
 
-class HideCreate(BaseModel):
-    item_id: int
-    item_type: Hide.ModelType
-
-
 class ReportOut(BaseOutSchema):
     pydantic_model = pydantic_model_creator(Report)
 
@@ -32,6 +27,11 @@ class ReportOut(BaseOutSchema):
         return {
             "item": (await item.get_item())[1]
         }
+
+
+class HideCreate(BaseModel):
+    item_id: int
+    item_type: Hide.ModelType
 
 
 class ReportCreate(BaseModel):

@@ -8,7 +8,7 @@ from .models import Category, Hide, Report
 router = APIRouter()
 
 
-@router.post("/hides", tags=["inform"], status_code=200)
+@router.post("/hides", tags=["interactions"], status_code=200)
 async def hide(
     hide: HideCreate,
     current_user: User = Depends(get_current_active_user)
@@ -16,7 +16,7 @@ async def hide(
     return await Hide.get_or_create(**hide.dict(), hider=current_user)
 
 
-@router.post("/report", tags=["inform"], status_code=200)
+@router.post("/report", tags=["interactions"], status_code=200)
 async def report(
     report: ReportCreate,
     current_user: User = Depends(get_current_active_user)

@@ -1,6 +1,7 @@
 from jose.exceptions import ExpiredSignatureError, JWTClaimsError, JWTError
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
+from tortoise.expressions import Q
 from datetime import timezone
 
 from app.core.base.utils import get_object_or_404, has_permission, extract_mentions_and_tags, extract_media_files
@@ -8,6 +9,7 @@ from app.core.auth.utils.contrib import get_current_active_user, get_current_act
 from .schemas import EventOut, EventCreate, EventUpdate, AttendeeOut, AttendeeCreate, EventRate
 from app.core.auth.utils.jwt import encode_jwt, decode_jwt
 from app.applications.interactions.models import Tag, Rate
+from app.applications.organisations.models import Club
 from .utils import EventFilter, AttendeeFilter
 from app.applications.users.models import User
 from app.core.base.paginator import Paginator
@@ -16,7 +18,7 @@ from .models import Event, Attendee
 router = APIRouter()
 
 
-@router.get("/", tags=["events"], status_code=200)
+@router.get("", tags=["events"], status_code=200)
 async def get_events(
     paginator: Paginator = Depends(),
     current_user: User | None = Depends(get_current_active_user_optional),
@@ -34,12 +36,16 @@ async def get_event(
     return await EventOut.serialize(event, current_user)
 
 
-@router.post("/", tags=["events"], status_code=201)
+@router.post("", tags=["events"], status_code=201)
 async def create_event(
     data: EventCreate,
     mentions_and_tags=Depends(extract_mentions_and_tags(EventCreate, ["name", "description"])),
     current_user: User = Depends(get_current_active_user),
 ):
+    if data.host_club_id:
+        club: Club = await get_object_or_404(Club, id=data.host_club_id)
+        has_permission(club.is_admin, current_user)
+
     print(mentions_and_tags)
     urls, event_dict = extract_media_files(data=data)
 
@@ -51,9 +57,10 @@ async def create_event(
 
     event = await Event.create(**event_dict, host_user=current_user, verification_link=jwt)
 
-    for tag in data.tags:
-        await Tag.create(name=tag, item_id=event.id, item_type="Event")
-    return {"created": event, "media_upload": urls}
+    await Tag.bulk_create(
+        Tag(name=name, item_id=event.id, item_type="Event") for name in data.tags
+    )
+    return {"created": await EventOut.serialize(event, current_user), "media_upload": urls}
 
 
 @router.put("/{id}", tags=["events"], status_code=200)
@@ -78,12 +85,10 @@ async def update_event(
 
     await event.update_from_dict(event_dict).save()
 
-    if data.tags:
-        for tag in await Tag.filter(item_id=id, item_type=Tag.ModelType.event):
-            if tag.name not in data.tags:
-                tag.delete()
+    if data.tags is not None:
+        await Tag.filter(Q(item_id=id, item_type="Event") & ~Q(name__in=data.tags)).delete()
         for tag in data.tags:
-            await Tag.get_or_create(name=tag, item_id=event.id, item_type=Tag.ModelType.event)
+            await Tag.get_or_create(name=tag, item_id=id, item_type="Event")
     return {"updated": event, "media_upload": urls}
 
 
@@ -190,7 +195,7 @@ async def verify(
     return attend
 
 
-@router.get("/{event_id}/forms", tags=["events"], status_code=200)
+@router.get("/forms", tags=["events"], status_code=200)
 async def get_forms(
     event_id: int,
     paginator: Paginator = Depends(),

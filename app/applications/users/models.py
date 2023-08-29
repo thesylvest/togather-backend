@@ -25,7 +25,7 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
             "is_superuser",
             "is_active",
             "unread_notifications",
-            "blocked_user",
+            "blocked_users",
             "blocked_by",
         )
     username = fields.CharField(max_length=50, unique=True)

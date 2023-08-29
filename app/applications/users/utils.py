@@ -65,19 +65,19 @@ class UserFilter(FilterSet):
             return queryset.filter(attendance__event_id=value, attendance__is_verified=False)
 
         @staticmethod
-        def rated(value: int, item_type: str, queryset, user):
-            return queryset.filter(rates__item_type=item_type, rates__item_id=value).annotate(
-                rate=Sum("rates__rate", _filter=Q(rates__item_type=item_type, rates__item_id=value))
+        def rated_post(value: int, queryset, user):
+            return queryset.filter(rates__item_type="Post", rates__item_id=value).annotate(
+                rate=Sum("rates__rate", _filter=Q(rates__item_type="Post", rates__item_id=value))
             )
 
         @staticmethod
-        def rated_post(value: int, queryset, user):
-            return UserFilter.Functions.rated(value, "Post", queryset, user)
-
-        @staticmethod
         def rated_comment(value: int, queryset, user):
-            return UserFilter.Functions.rated(value, "Comment", queryset, user)
+            return queryset.filter(rates__item_type="Comment", rates__item_id=value).annotate(
+                rate=Sum("rates__rate", _filter=Q(rates__item_type="Comment", rates__item_id=value))
+            )
 
         @staticmethod
         def rated_event(value: int, queryset, user):
-            return UserFilter.Functions.rated(value, "Event", queryset, user)
+            return queryset.filter(rates__item_type="Event", rates__item_id=value).annotate(
+                rate=Sum("rates__rate", _filter=Q(rates__item_type="Event", rates__item_id=value))
+            )

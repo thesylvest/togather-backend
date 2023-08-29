@@ -35,8 +35,8 @@ def extract_mentions_and_tags(Model: Type[BaseModel], fields: List[str]):
     return _extract_mentions_and_tags
 
 
-async def extract_media_files(data: BaseModel, item=None) -> Tuple[List[dict], List[str]]:
-    data = data.dict(exclude_none=True, exclude=["media"])
+def extract_media_files(data: BaseModel, item=None) -> Tuple[List[dict], List[str]]:
+    data_dict = data.dict(exclude_none=True, exclude=["media"])
     urls = []
     media = []
     if data.media:
@@ -44,8 +44,11 @@ async def extract_media_files(data: BaseModel, item=None) -> Tuple[List[dict], L
             if item and media_dict.get("name", None) not in item.media["media"]:
                 url, name = S3.upload_file(media_dict["file_type"])
                 urls.append(url)
+            elif item is None:
+                url, name = S3.upload_file(media_dict["file_type"])
+                urls.append(url)
             else:
                 name = media_dict["name"]
             media.append(name)
-        data["media"] = {"media": media}
-    return urls, data
+    data_dict["media"] = {"media": media}
+    return urls, data_dict

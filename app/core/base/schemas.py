@@ -1,5 +1,4 @@
 from tortoise.contrib.pydantic.base import PydanticModel
-from pydantic import BaseModel
 
 
 class BaseOutSerializer:
@@ -26,12 +25,3 @@ class BaseOutSchema(BaseOutSerializer):
         data = (await cls.pydantic_model.from_tortoise_orm(item)).dict()
         data.update(await cls.add_fields(item, user))
         return data
-
-
-class BaseInSchema(BaseModel):
-    def to_dict(self):
-        return self.dict(
-            exclude_unset=True,
-            exclude_none=True,
-            exclude={"id"},
-        )

@@ -81,6 +81,12 @@ class Tag(BaseDBModel, ContentType):
 class Category(BaseDBModel):
     class Meta:
         table = "categories"
+
+    class PydanticMeta:
+        backward_relations = False
+        exclude = (
+            "follower",
+        )
     name = fields.CharField(max_length=255)
     picture = fields.CharField(max_length=255, null=True)
 

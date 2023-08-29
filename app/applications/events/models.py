@@ -53,6 +53,12 @@ class Event(BaseDBModel, BaseCreatedAtModel, LocationModel):
 class Attendee(BaseDBModel):
     class Meta:
         table = "attendees"
+
+    class PydanticMeta:
+        backward_relations = False
+        exclude = (
+            "form_data",
+        )
     is_verified = fields.BooleanField(default=False)
     form_data = fields.JSONField(null=True)
     event: fields.ForeignKeyRelation = fields.ForeignKeyField(

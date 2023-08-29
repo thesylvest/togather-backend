@@ -15,7 +15,7 @@ from .utils import UserFilter
 router = APIRouter()
 
 
-@router.get("/", status_code=200, tags=["users"])
+@router.get("", status_code=200, tags=["users"])
 async def read_users(
     paginator: Paginator = Depends(),
     current_user: User = Depends(get_current_active_user_optional),
@@ -36,20 +36,18 @@ async def update_me(
     if data.password is not None:
         user_dict["password_hash"] = get_password_hash(data.password)
 
-    for category in await current_user.categories.all():
-        if category.name not in data.categories:
-            await current_user.categories.remove(category)
     try:
-        await current_user.categories.remove(
-            await Category.filter(
-                ~Q(name__in=data.categories) & Q(follower=current_user)
-            )
+        await current_user.categories.add(
+            *(await Category.filter(id__in=data.categories))
         )
+        await current_user.categories.remove(
+            *(await Category.filter(
+                ~Q(id__in=data.categories) & Q(follower=current_user)
+            ))
+        )
+        user_dict.pop("categories")
     except Exception:
         pass
-    await current_user.categories.add(
-        await Category.filter(name__in=data.categories)
-    )
 
     await current_user.update_from_dict(user_dict).save()
 
