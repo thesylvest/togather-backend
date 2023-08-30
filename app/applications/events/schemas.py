@@ -91,9 +91,5 @@ class EventCreate(EventUpdate):
     host_club_id: Optional[int] = None
 
 
-class EventRate(BaseModel):
-    rate: int = Field(..., le=5, ge=1)
-
-
 class AttendeeCreate(BaseModel):
     form_data: Optional[dict] = None

@@ -46,8 +46,7 @@ async def login_access_token(
         await update_last_login(user.id)
     elif not user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect credentials",
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect credentials"
         )
     elif not user.is_active:
         raise HTTPException(
@@ -99,7 +98,7 @@ async def recover_password(email: str, background_tasks: BackgroundTasks):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="The user with this username does not exist in the system.",
+            detail="The user with this email does not exist in the system.",
         )
 
     password_reset_token = generate_password_reset_token(email=email)
@@ -254,7 +253,7 @@ async def login_google_callback(request: Request):
             ],  # TODO: need to check if username already exists
             "email": decoded_info["email"],
             "password": "pass",  # MASSIVE TODO: change this to something more secure
-            "first_name": decoded_info["given_name"],
+            "first_name": decoded_info["given_name"],  # TODO: change these into proper fields
             "last_name": decoded_info["family_name"],
         }
 
@@ -280,6 +279,3 @@ async def login_google_callback(request: Request):
             status_code=500,
             detail="Error creating user.",
         )
-
-
-# TODO: implement log out

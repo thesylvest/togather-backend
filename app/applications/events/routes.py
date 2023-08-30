@@ -6,8 +6,9 @@ from datetime import timezone
 
 from app.core.base.utils import get_object_or_404, has_permission, extract_mentions_and_tags, extract_media_files
 from app.core.auth.utils.contrib import get_current_active_user, get_current_active_user_optional
-from .schemas import EventOut, EventCreate, EventUpdate, AttendeeOut, AttendeeCreate, EventRate
+from .schemas import EventOut, EventCreate, EventUpdate, AttendeeOut, AttendeeCreate
 from app.core.auth.utils.jwt import encode_jwt, decode_jwt
+from app.applications.interactions.schemas import RateItem
 from app.applications.interactions.models import Tag, Rate
 from app.applications.organisations.models import Club
 from .utils import EventFilter, AttendeeFilter
@@ -107,7 +108,7 @@ async def delete_event(
 @router.post("/{id}/rate", tags=["events"], status_code=200)
 async def rate_event(
     id: int,
-    rate: EventRate,
+    rate: RateItem,
     current_user: User = Depends(get_current_active_user),
 ):
     event: Event = await get_object_or_404(Event, id=id)

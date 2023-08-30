@@ -6,6 +6,8 @@ from app.applications.users.models import User
 from .schemas import BaseOutSchema
 
 
+# TODO: add different logics for normal pagination, random sampling, and for recommender
+# try to utilize prefetchs on querysets to avoid n+1
 class Paginator:
     def __init__(
         self,

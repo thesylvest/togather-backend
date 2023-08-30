@@ -117,7 +117,6 @@ async def authenticate(credentials: CredentialsSchema) -> Optional[User]:
 
 def decode_google_token(token):
     try:
-        # Verify and decode the Google ID token
         id_info = id_token.verify_oauth2_token(token, requests.Request())
         return id_info
     except ValueError as e:

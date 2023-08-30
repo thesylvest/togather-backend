@@ -15,10 +15,30 @@ class ListStr(str):
         return {'type': 'str'}
 
 
+# TODO: seperate for search and filtering.
+# Also make search based on ts vectors
 class FilterSet:
     _type_hints_cache = {}
     _search_fields_cache = {}
     model: Model
+
+    @classmethod
+    def get_type_hint(cls, field_name: str):
+        if cls not in cls._type_hints_cache:
+            cls._type_hints_cache[cls] = get_type_hints(cls.Parameters)
+        return cls._type_hints_cache[cls][field_name]
+
+    @classmethod
+    def get_search_fields(cls):
+        if cls not in cls._search_fields_cache:
+            cls._search_fields_cache[cls] = list(cls.SearchFields.schema()["properties"].keys())
+        return cls._search_fields_cache[cls]
+
+    @classmethod
+    def convert_actual_value(cls, field_name: str, value_str: str):
+        if cls.get_type_hint(field_name) == Optional[ListStr]:
+            return value_str.split(",")
+        return value_str
 
     class Parameters(BaseModel):
         pass
@@ -41,18 +61,6 @@ class FilterSet:
         return queryset.filter(**filters)
 
     @classmethod
-    def get_type_hint(cls, field_name: str):
-        if cls not in cls._type_hints_cache:
-            cls._type_hints_cache[cls] = get_type_hints(cls.Parameters)
-        return cls._type_hints_cache[cls][field_name]
-
-    @classmethod
-    def convert_actual_value(cls, field_name: str, value_str: str):
-        if cls.get_type_hint(field_name) == Optional[ListStr]:
-            return value_str.split(",")
-        return value_str
-
-    @classmethod
     def search(cls, search_text: str, queryset: QuerySet) -> QuerySet:
         if search_text is None:
             return queryset
@@ -61,12 +69,6 @@ class FilterSet:
             for field in cls.get_search_fields()
         )
         return queryset.filter(Q(*search_queries, join_type="OR"))
-
-    @classmethod
-    def get_search_fields(cls):
-        if cls not in cls._search_fields_cache:
-            cls._search_fields_cache[cls] = list(cls.SearchFields.schema()["properties"].keys())
-        return cls._search_fields_cache[cls]
 
     @classmethod
     def apply_function_filters(cls, function_filters: FunctionFilters, queryset, user):
@@ -85,13 +87,13 @@ class FilterSet:
                 function_filters: cls.FunctionFilters = Depends(),
                 current_user=Depends(get_current_active_user_optional)
         ):
-            hide_filter = Q(id__in=Subquery(Hide.filter(hider=current_user, item_type=cls.model.__name__).values("item_id")))
+            hidden = Q(id__in=Subquery(Hide.filter(hider=current_user, item_type=cls.model.__name__).values("item_id")))
             if not current_user or filter_mode == "all":
                 queryset = cls.model.all()
             elif filter_mode == "regular":
-                queryset = cls.model.filter(~hide_filter)
+                queryset = cls.model.filter(~hidden)
             elif filter_mode == "hidden":
-                queryset = cls.model.filter(hide_filter)
+                queryset = cls.model.filter(hidden)
             filtered_query = cls.apply_filters(query_params, queryset)
             searched_query = cls.search(search_text, filtered_query)
             function_query = cls.apply_function_filters(function_filters, searched_query, current_user)

@@ -38,3 +38,7 @@ class ReportCreate(BaseModel):
     item_id: int
     item_type: Report.ModelType
     reason: str = Field(..., max_length=512)
+
+
+class RateItem(BaseModel):
+    rate: int = Field(..., le=5, ge=1)

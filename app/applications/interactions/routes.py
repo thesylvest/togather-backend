@@ -5,10 +5,10 @@ from app.applications.users.models import User
 from .schemas import HideCreate, ReportCreate
 from .models import Category, Hide, Report
 
-router = APIRouter()
+interaction_router = APIRouter()
 
 
-@router.post("/hides", tags=["interactions"], status_code=200)
+@interaction_router.post("/hides", tags=["interactions"], status_code=200)
 async def hide(
     hide: HideCreate,
     current_user: User = Depends(get_current_active_user)
@@ -16,7 +16,7 @@ async def hide(
     return await Hide.get_or_create(**hide.dict(), hider=current_user)
 
 
-@router.post("/report", tags=["interactions"], status_code=200)
+@interaction_router.post("/report", tags=["interactions"], status_code=200)
 async def report(
     report: ReportCreate,
     current_user: User = Depends(get_current_active_user)
@@ -27,6 +27,6 @@ async def report(
     return await Report.create(**report.dict(), reporter=current_user)
 
 
-@router.get("/categories", tags=["categories"], status_code=200)
+@interaction_router.get("/categories", tags=["categories"], status_code=200)
 async def get_categories():
     return await Category.all()

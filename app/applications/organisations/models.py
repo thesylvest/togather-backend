@@ -57,6 +57,11 @@ class Club(Organisation):
         membership: Membership = await Membership.get_or_none(club=self, user=user)
         return False if membership is None else membership.is_admin
 
+    async def can_post(self, user):
+        if self.post_policy:
+            return True
+        return await self.is_admin(user)
+
     async def destroy_non_admin(self):
         if not await Membership.filter(club=self, is_admin=True).exists():
             await self.delete()

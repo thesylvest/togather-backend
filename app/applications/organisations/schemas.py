@@ -16,7 +16,7 @@ class ClubOut(BaseOutSchema):
     async def rate(item: Club):
         event_ids = [event.id for event in item.hosted_events]
         return (await Rate.filter(
-            item_id__in=event_ids, item_type="Event"
+            item_id__in=event_ids, item_type="Club"
         ).annotate(avg=Avg("rate")).values("avg"))[0]["avg"]
 
     @staticmethod
@@ -54,12 +54,13 @@ class ClubOut(BaseOutSchema):
             "requets_data": {
                 "allowed_actions": await ClubOut.allowed_actions(item, user),
             },
+            "media": await ClubOut.media(item),
+            "tags": await ClubOut.tags(item),
             "rate": await ClubOut.rate(item),
             "post_count": item.post_count,
             "hosted_event_count": len(item.hosted_events),
             "member_count": item.member_count,
             "event_attendee_count": item.event_attendee_count,
-            "media": await ClubOut.media(item),
         }
 
 
