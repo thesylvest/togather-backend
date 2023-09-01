@@ -50,13 +50,7 @@ async def create_event(
     print(mentions_and_tags)
     urls, event_dict = extract_media_files(data=data)
 
-    jwt = encode_jwt({
-        "id": data.name,
-        "nbf": data.start_date.replace(tzinfo=timezone.utc).timestamp(),
-        "exp": data.end_date.replace(tzinfo=timezone.utc).timestamp()
-    })
-
-    event = await Event.create(**event_dict, host_user=current_user, verification_link=jwt)
+    event = await Event.create(**event_dict, host_user=current_user)
 
     await Tag.bulk_create(
         Tag(name=name, item_id=event.id, item_type="Event") for name in data.tags
@@ -76,14 +70,6 @@ async def update_event(
     await has_permission(event.is_host, current_user)
 
     urls, event_dict = extract_media_files(data=data, item=event)
-
-    if data.start_date != event.start_date or data.end_date != event.end_date:
-        event_dict["verification_link"] = encode_jwt({
-            "id": data.name,
-            "nbf": data.start_date.replace(tzinfo=timezone.utc).timestamp(),
-            "exp": data.end_date.replace(tzinfo=timezone.utc).timestamp()
-        })
-
     await event.update_from_dict(event_dict).save()
 
     if data.tags is not None:
@@ -168,7 +154,13 @@ async def get_verification(
     event: Event = await get_object_or_404(Event, id=id)
     await has_permission(event.is_host, current_user)
 
-    return {"verification_link": event.verification_link}
+    return {
+        "verification_link": encode_jwt({
+            "id": event.name,
+            "nbf": event.start_date.replace(tzinfo=timezone.utc).timestamp(),
+            "exp": event.end_date.replace(tzinfo=timezone.utc).timestamp()
+        })
+    }
 
 
 @router.get("/verify/{token}", tags=["events"], status_code=200)

@@ -1,9 +1,10 @@
 from tortoise.expressions import Q, Subquery
 from typing import Optional, get_type_hints
 from tortoise.queryset import QuerySet
+from fastapi import Depends, Query
 from pydantic import BaseModel
-from fastapi import Depends
 from tortoise import Model
+from enum import Enum
 
 from app.core.auth.utils.contrib import get_current_active_user_optional
 from app.applications.interactions.models import Hide
@@ -13,6 +14,13 @@ class ListStr(str):
     @classmethod
     def __get_pydantic_core_schema__(cls, handler):
         return {'type': 'str'}
+
+
+class FilterMode(Enum):
+    regular = "regular"
+    hidden = "hidden"
+    blocked = "blocked"
+    all = "all"
 
 
 # TODO: seperate for search and filtering.
@@ -72,31 +80,46 @@ class FilterSet:
 
     @classmethod
     def apply_function_filters(cls, function_filters: FunctionFilters, queryset, user):
+        annotations: list[str] = []
         for method, value in function_filters.dict().items():
             if value is None:
                 continue
-            queryset = getattr(cls.Functions, method)(value, queryset, user)
-        return queryset
+            queryset, annotate = getattr(cls.Functions, method)(value, queryset, user)
+            annotations = annotations + annotate
+        return queryset, annotations
+
+    @classmethod
+    def mode_filters(cls, user):
+        hidden = Q(id__in=Subquery(Hide.filter(hider=user, item_type=cls.model.__name__).values("item_id")))
+        return hidden, None
 
     @classmethod
     def dependency(cls):
         def item_filter(
-                filter_mode: str = "regular",
-                search_text: str = None,
+                filter_mode: FilterMode = Query(FilterMode.regular),
+                search_text: Optional[str] = None,
                 query_params: cls.Parameters = Depends(),
                 function_filters: cls.FunctionFilters = Depends(),
                 current_user=Depends(get_current_active_user_optional)
         ):
-            hidden = Q(id__in=Subquery(Hide.filter(hider=current_user, item_type=cls.model.__name__).values("item_id")))
-            if not current_user or filter_mode == "all":
+            if not current_user:
                 queryset = cls.model.all()
-            elif filter_mode == "regular":
-                queryset = cls.model.filter(~hidden)
-            elif filter_mode == "hidden":
-                queryset = cls.model.filter(hidden)
+            else:
+                hidden, blocked = cls.mode_filters(current_user)
+                if filter_mode == FilterMode.all:
+                    queryset = cls.model.all()
+                elif filter_mode == FilterMode.regular:
+                    queryset = cls.model.exclude(hidden | blocked)
+                elif filter_mode == FilterMode.hidden:
+                    queryset = cls.model.filter(hidden)
+                elif filter_mode == FilterMode.blocked:
+                    queryset = cls.model.filter(blocked)
             filtered_query = cls.apply_filters(query_params, queryset)
             searched_query = cls.search(search_text, filtered_query)
-            function_query = cls.apply_function_filters(function_filters, searched_query, current_user)
+            function_query, annotations = cls.apply_function_filters(function_filters, searched_query, current_user)
+            print("======================================")
+            print(annotations)
             print(function_query.sql())
-            return function_query
+            print("======================================")
+            return function_query, annotations
         return item_filter

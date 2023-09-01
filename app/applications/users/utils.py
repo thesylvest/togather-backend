@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 
 from app.core.base.filter_set import FilterSet
-from .models import User, Connection
+from .models import User, Connection, Blocked
 
 
 async def update_last_login(user_id: int) -> None:
@@ -15,6 +15,12 @@ async def update_last_login(user_id: int) -> None:
 
 class UserFilter(FilterSet):
     model = User
+
+    @classmethod
+    def mode_filters(cls, user):
+        hidden, _ = super().mode_filters(user)
+        blocked = Q(id__in=Subquery(Blocked.filter(blocking_user=user).values("blocked_user_id")))
+        return hidden, blocked
 
     class Parameters(FilterSet.Parameters):
         posts: Optional[int] = None
@@ -46,38 +52,38 @@ class UserFilter(FilterSet):
             return queryset.filter(
                 Q(id__in=Subquery(Connection.filter(is_accepted=True, from_user_id=value).values('to_user_id'))) |
                 Q(id__in=Subquery(Connection.filter(is_accepted=True, to_user_id=value).values('from_user_id')))
-            )
+            ), []
 
         @staticmethod
         def club_admins(value: int, queryset, user):
-            return queryset.filter(memberships__club_id=value, memberships__is_admin=True)
+            return queryset.filter(memberships__club_id=value, memberships__is_admin=True), []
 
         @staticmethod
         def club_members(value: int, queryset, user):
-            return queryset.filter(memberships__club_id=value, memberships__is_admin=False)
+            return queryset.filter(memberships__club_id=value, memberships__is_admin=False), []
 
         @staticmethod
         def verified_attendees(value: int, queryset, user):
-            return queryset.filter(attendance__event_id=value, attendance__is_verified=True)
+            return queryset.filter(attendance__event_id=value, attendance__is_verified=True), []
 
         @staticmethod
         def unverified_attendees(value: int, queryset, user):
-            return queryset.filter(attendance__event_id=value, attendance__is_verified=False)
+            return queryset.filter(attendance__event_id=value, attendance__is_verified=False), []
 
         @staticmethod
         def rated_post(value: int, queryset, user):
             return queryset.filter(rates__item_type="Post", rates__item_id=value).annotate(
-                rate=Sum("rates__rate", _filter=Q(rates__item_type="Post", rates__item_id=value))
-            )
+                post_rate=Sum("rates__rate", _filter=Q(rates__item_type="Post", rates__item_id=value))
+            ), ["post_rate"]
 
         @staticmethod
         def rated_comment(value: int, queryset, user):
             return queryset.filter(rates__item_type="Comment", rates__item_id=value).annotate(
-                rate=Sum("rates__rate", _filter=Q(rates__item_type="Comment", rates__item_id=value))
-            )
+                comment_rate=Sum("rates__rate", _filter=Q(rates__item_type="Comment", rates__item_id=value))
+            ), ["comment_rate"]
 
         @staticmethod
         def rated_event(value: int, queryset, user):
             return queryset.filter(rates__item_type="Event", rates__item_id=value).annotate(
-                rate=Sum("rates__rate", _filter=Q(rates__item_type="Event", rates__item_id=value))
-            )
+                event_rate=Sum("rates__rate", _filter=Q(rates__item_type="Event", rates__item_id=value))
+            ), ["event_rate"]

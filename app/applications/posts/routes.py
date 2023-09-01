@@ -6,6 +6,8 @@ from app.core.auth.utils.contrib import get_current_active_user, get_current_act
 from .schemas import PostOut, PostCreate, PostUpdate, CommentOut, CommentCreate, CommentUpdate
 from app.applications.interactions.schemas import RateItem
 from app.applications.interactions.models import Tag, Rate
+from app.applications.organisations.models import Club
+from app.applications.events.models import Event
 from app.applications.users.models import User
 from app.core.base.paginator import Paginator
 from .utils import PostFilter, CommentFilter
@@ -42,8 +44,12 @@ async def create_club(
     print(mentions_and_tags)
     urls, post_dict = extract_media_files(data=data)
 
-    if data.author_club:
-        has_permission(data.author_club.can_post, current_user)
+    if data.event_id:
+        event = await get_object_or_404(Event, id=data.event_id)
+        await has_permission(event.can_post, current_user)
+    elif data.author_club_id:
+        club = await get_object_or_404(Club, id=data.author_club_id)
+        await has_permission(club.can_post, current_user)
 
     post = await Post.create(**post_dict, creator=current_user)
 
@@ -87,7 +93,7 @@ async def delete_post(
 
 
 @post_router.post("/{id}/rate", tags=["posts"], status_code=200)
-async def rate_event(
+async def rate_post(
     id: int,
     rate: RateItem,
     current_user: User = Depends(get_current_active_user),
@@ -124,7 +130,7 @@ async def get_comment(
 
 
 @comment_router.post("", tags=["comments"])
-async def create_place(
+async def create_comment(
     data: CommentCreate,
     mentions_and_tags=Depends(extract_mentions_and_tags(CommentCreate, ["content"])),
     current_user: User = Depends(get_current_active_user),
@@ -141,7 +147,7 @@ async def create_place(
 
 
 @comment_router.put("/{id}", tags=["comments"], status_code=200)
-async def update_place(
+async def update_comment(
     id: int,
     data: CommentUpdate,
     mentions_and_tags=Depends(extract_mentions_and_tags(CommentUpdate, ["content"])),

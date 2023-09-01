@@ -1,5 +1,7 @@
+from tortoise.expressions import Subquery
 from typing import Optional
 
+from app.applications.interactions.models import Tag
 from app.core.base.filter_set import FilterSet
 from .models import Club, Place
 
@@ -19,15 +21,23 @@ class ClubFilter(FilterSet):
     class FunctionFilters(FilterSet.FunctionFilters):
         admins: Optional[int] = None
         members: Optional[int] = None
+        tags: Optional[str] = None
 
     class Functions(FilterSet.Functions):
         @staticmethod
+        def tags(value: str, queryset, user):
+            tags = value.split(",")
+            return queryset.filter(
+                id__in=Subquery(Tag.filter(item_type="Club", name__in=tags).values("item_id"))
+            ), []
+
+        @staticmethod
         def admins(value: int, queryset, user):
-            return queryset.filter(memberships__user_id=value, memberships__is_admin=True)
+            return queryset.filter(memberships__user_id=value, memberships__is_admin=True), []
 
         @staticmethod
         def members(value: int, queryset, user):
-            return queryset.filter(memberships__user_id=value, memberships__is_admin=False)
+            return queryset.filter(memberships__user_id=value, memberships__is_admin=False), []
 
 
 class PlaceFilter(FilterSet):
@@ -40,3 +50,14 @@ class PlaceFilter(FilterSet):
     class SearchFields(FilterSet.SearchFields):
         name: str
         description: str
+
+    class FunctionFilters(FilterSet.FunctionFilters):
+        tags: Optional[str] = None
+
+    class Functions(FilterSet.Functions):
+        @staticmethod
+        def tags(value: str, queryset, user):
+            tags = value.split(",")
+            return queryset.filter(
+                id__in=Subquery(Tag.filter(item_type="Place", name__in=tags).values("item_id"))
+            ), []

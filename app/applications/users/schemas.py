@@ -1,7 +1,6 @@
 from tortoise.contrib.pydantic import pydantic_model_creator
+from tortoise.expressions import Q, Subquery
 from pydantic import BaseModel, EmailStr
-from tortoise.functions import Count
-from tortoise.expressions import Q
 from datetime import datetime
 from typing import Optional
 
@@ -9,12 +8,8 @@ from app.core.base.schemas import BaseOutSchema
 from .models import User, Connection
 
 
-class UserPydantic(pydantic_model_creator(User, exclude=["university", "categories"])):
-    rate: float | None = None
-
-
 class UserOut(BaseOutSchema):
-    pydantic_model = UserPydantic
+    pydantic_model = pydantic_model_creator(User)
 
     @staticmethod
     async def connection(item, user):
@@ -41,21 +36,19 @@ class UserOut(BaseOutSchema):
 
     @classmethod
     async def add_fields(cls, item: User, user):
-        user = await User.annotate(
-            post_count=Count('posts'),
-            hosted_event_count=Count('hosted_events'),
-            attended_event_count=Count('attended_events')
-        ).prefetch_related("categories", "university").get(id=item.id)
+        counts = await User.get(id=item.id).annotate(
+            post_count=Subquery(item.posts.all().count()),
+            hosted_event_count=Subquery(item.hosted_events.all().count()),
+            attended_event_count=Subquery(item.attendance.all().count()),
+        )
         return {
             "requets_data": {
                 "allowed_actions": await UserOut.allowed_actions(item, user),
                 "connection_status": await UserOut.connection(item, user),
             },
-            "post_count": user.post_count,
-            "hosted_event_count": user.hosted_event_count,
-            "attended_event_count": user.attended_event_count,
-            "university": user.university,
-            "categories": list(user.categories)
+            "post_count": counts.post_count,
+            "hosted_event_count": counts.hosted_event_count,
+            "attended_event_count": counts.attended_event_count,
         }
 
 
@@ -71,8 +64,8 @@ class UserUpdate(BaseModel):
     birth_date: Optional[datetime] = None
     private_profile: Optional[bool] = None
     university: Optional[int] = None
-    media: Optional[list[dict]] = None
-    categories: Optional[list[int]] = None
+    media: list[dict] = None
+    categories: list[int] = None
 
 
 class LocationUpdate(BaseModel):

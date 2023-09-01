@@ -1,12 +1,12 @@
 from tortoise.contrib.pydantic import pydantic_model_creator
-from tortoise.functions import Avg, Count
+from tortoise.expressions import Subquery
 from pydantic import BaseModel, Field
+from tortoise.functions import Avg
 from datetime import datetime
 from typing import Optional
 
 from app.applications.interactions.models import Tag, Rate
 from app.core.base.schemas import BaseOutSchema
-from app.core.base.media_manager import S3
 from .models import Event, Attendee
 
 
@@ -20,38 +20,35 @@ class EventOut(BaseOutSchema):
         ).annotate(avg=Avg("rate")).values("avg"))[0]["avg"]
 
     @staticmethod
-    async def media(item: Event):
-        return [S3.get_file_url(media) for media in item.media]
-
-    @staticmethod
     async def tags(item: Event):
         return await Tag.filter(
-            item_type=Tag.ModelType.event,
+            item_type="Event",
             item_id=item.id
         ).values_list("name", flat=True)
 
     @staticmethod
     async def allowed_actions(item: Event, user):
         is_host = bool(user) and await item.is_host(user)
+        can_post = bool(user) and await item.can_post(user)
         is_not_attendee = bool(user) and not await item.attendees.filter(id=user.id).exists()
         return {
             "canEdit": is_host,
             "canDelete": is_host,
             "viewForm": is_host,
             "canAttend": is_not_attendee,
+            "canPost": can_post
         }
 
     @classmethod
     async def add_fields(cls, item: Event, user):
         item = await Event.annotate(
-            attendee_count=Count('attendees'),
+            attendee_count=Subquery(item.attendees.all().count()),
         ).get(id=item.id)
         return {
             "request_data": {
                 "allowed_actions": await EventOut.allowed_actions(item, user),
             },
             "tags": await EventOut.tags(item),
-            "media": await EventOut.media(item),
             "rate": await EventOut.rate(item),
             "attendee_count": item.attendee_count,
         }
@@ -77,7 +74,7 @@ class EventUpdate(BaseModel):
     description: Optional[str] = None
     links: Optional[dict] = None
     form: Optional[dict] = None
-    media: Optional[list[dict]] = None
+    media: list[dict] = None
     tags: Optional[list[str]] = []
 
 

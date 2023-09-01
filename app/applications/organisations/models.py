@@ -1,15 +1,14 @@
 from tortoise import fields
 
-from app.core.base.models import BaseCreatedUpdatedAtModel, LocationModel, BaseDBModel
+from app.core.base.models import BaseCreatedUpdatedAtModel, LocationModel, BaseDBModel, MediaModel
 
 
-class Organisation(BaseDBModel, BaseCreatedUpdatedAtModel, LocationModel):
+class Organisation(BaseDBModel, BaseCreatedUpdatedAtModel, LocationModel, MediaModel):
     class Meta:
         abstract = True
 
     name = fields.CharField(max_length=255, unique=True)
     description = fields.CharField(max_length=255, null=True)
-    media = fields.JSONField(null=True)
     links = fields.JSONField(null=True)
 
 
@@ -33,10 +32,11 @@ class Club(Organisation):
 
     class PydanticMeta:
         backward_relations = False
-        exclude = (
+        exclude = [
             "members",
             "memberships"
-        )
+        ]
+        computed = ["media"]
     post_policy = fields.BooleanField(default=True)
 
     posts: fields.ReverseRelation
@@ -73,9 +73,10 @@ class Place(Organisation):
 
     class PydanticMeta:
         backward_relations = False
-        exclude = (
+        exclude = [
             "owners",
-        )
+        ]
+        computed = ["media"]
     is_valid = fields.BooleanField(default=False)
 
     advertisements: fields.ReverseRelation

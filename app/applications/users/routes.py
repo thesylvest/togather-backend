@@ -36,18 +36,19 @@ async def update_me(
     if data.password is not None:
         user_dict["password_hash"] = get_password_hash(data.password)
 
-    try:
-        await current_user.categories.add(
+    if data.categories:
+        user_dict.pop("categories")
+        await current_user.interests.add(
             *(await Category.filter(id__in=data.categories))
         )
-        await current_user.categories.remove(
-            *(await Category.filter(
-                ~Q(id__in=data.categories) & Q(follower=current_user)
-            ))
-        )
-        user_dict.pop("categories")
-    except Exception:
-        pass
+        try:
+            await current_user.interests.remove(
+                *(await Category.filter(
+                    ~Q(id__in=data.categories) & Q(follower=current_user)
+                ))
+            )
+        except Exception:
+            pass
 
     await current_user.update_from_dict(user_dict).save()
 

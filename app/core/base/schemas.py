@@ -1,27 +1,17 @@
 from tortoise.contrib.pydantic.base import PydanticModel
 
 
-class BaseOutSerializer:
-    @classmethod
-    async def serialize(cls, item, user) -> dict:
-        """
-        The item is a orm model, and user can be none or request.user
-        """
-        raise NotImplementedError
-
-    @classmethod
-    async def add_fields(cls, item, user) -> dict:
-        """
-        The item is a orm model, and user can be none or request.user
-        """
-        return dict()
-
-
-class BaseOutSchema(BaseOutSerializer):
+class BaseOutSchema:
     pydantic_model = PydanticModel
 
     @classmethod
-    async def serialize(cls, item, user) -> dict:
+    async def serialize(cls, item, user, annotations=[]) -> dict:
         data = (await cls.pydantic_model.from_tortoise_orm(item)).dict()
         data.update(await cls.add_fields(item, user))
+        for annotation in annotations:
+            data[annotation] = getattr(item, annotation, None)
         return data
+
+    @classmethod
+    async def add_fields(cls, item, user) -> dict:
+        return dict()

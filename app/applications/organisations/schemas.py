@@ -1,12 +1,13 @@
 from tortoise.contrib.pydantic import pydantic_model_creator
-from tortoise.functions import Count, Avg
+from tortoise.expressions import Subquery
+from tortoise.functions import Avg
 from pydantic import BaseModel
 from typing import Optional
 
 from app.applications.interactions.models import Tag, Rate
+from app.applications.events.models import Attendee
 from app.core.base.schemas import BaseOutSchema
 from .models import Club, Place, Advertisement
-from app.core.base.media_manager import S3
 
 
 class ClubOut(BaseOutSchema):
@@ -18,10 +19,6 @@ class ClubOut(BaseOutSchema):
         return (await Rate.filter(
             item_id__in=event_ids, item_type="Club"
         ).annotate(avg=Avg("rate")).values("avg"))[0]["avg"]
-
-    @staticmethod
-    async def media(item: Club):
-        return [S3.get_file_url(media) for media in item.media]
 
     @staticmethod
     async def tags(item: Club):
@@ -46,9 +43,9 @@ class ClubOut(BaseOutSchema):
     @classmethod
     async def add_fields(cls, item: Club, user):
         item = await Club.annotate(
-            post_count=Count('posts'),
-            event_attendee_count=Count('hosted_events__attendees'),
-            member_count=Count('members'),
+            post_count=Subquery(item.posts.all().count()),
+            event_attendee_count=Subquery(Attendee.filter(event__host_club=item).count()),
+            member_count=Subquery(item.members.all().count()),
         ).prefetch_related("hosted_events").get(id=item.id)
         return {
             "requets_data": {
@@ -66,10 +63,6 @@ class ClubOut(BaseOutSchema):
 
 class PlaceOut(BaseOutSchema):
     pydantic_model = pydantic_model_creator(Place, exclude=("ownerships", ))
-
-    @staticmethod
-    async def media(item: Place):
-        return [S3.get_file_url(media) for media in item.media]
 
     @staticmethod
     async def tags(item: Place):
@@ -92,8 +85,8 @@ class PlaceOut(BaseOutSchema):
     @classmethod
     async def add_fields(cls, item: Place, user):
         item = await Place.annotate(
-            owner_count=Count('owners'),
-            advertisement_count=Count('advertisements')
+            owner_count=Subquery(item.owners.all().count()),
+            advertisement_count=Subquery(item.advertisements.all().count())
         ).get(id=item.id)
         return {
             "requets_data": {
@@ -117,7 +110,7 @@ class OrganisationUpdate(BaseModel):
     category_id: Optional[int] = None
     description: Optional[str] = None
     links: Optional[dict] = None
-    media: Optional[list[dict]] = None
+    media: list[dict] = None
     tags: Optional[list[str]] = []
 
 

@@ -1,7 +1,6 @@
 from tortoise.contrib.fastapi import register_tortoise
 from firebase_admin import credentials, initialize_app
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.openapi.utils import get_openapi
 from tortoise import Tortoise
 from fastapi import FastAPI
 import logging.config
@@ -71,44 +70,13 @@ app.include_router(interaction_router, prefix='/api')
 app.include_router(fcm_router, prefix='/api/fcm')
 
 
-@app.get("/schema", tags=["schema"])
-def get_openapi_schema():
-    openapi_schema = get_openapi(
-        title="My Application",
-        version="1.0.0",
-        description="This is the OpenAPI schema",
-        routes=app.routes,
-    )
-
-    for path, path_data in openapi_schema["paths"].items():
-        for method, method_data in path_data.items():
-            method_data.pop("responses", None)
-            method_data.pop("summary", None)
-            method_data.pop("description", None)
-            method_data.pop("operationId", None)
-            method_data.pop("tags", None)
-
-            request_body = method_data.get("requestBody", {})
-            content = request_body.get("content", {})
-            json_content = content.get("application/json", {})
-            schema = json_content.get("schema", {})
-            ref = schema.get("$ref", "")
-            if ref:
-                ref_name = ref.split("/")[-1]
-                actual_schema = openapi_schema["components"]["schemas"].get(ref_name)
-                if actual_schema:
-                    json_content["schema"] = actual_schema
-    return openapi_schema
-
-
-# TODO: create filters for tags
-# TODO: add filter for blocked users
-# TODO: make media as a computed field
 # TODO: add email support
+# TODO: make foreign keys on delete logic
+# TODO: login url with redirect capabilities
+# TODO: change secret key with openssl rand -hex 32
 # TODO: add pagination capabilities for regular, randomized, recommended etc.
 # TODO: fetch user name and last name from email
-# TODO: consider making optional fields into direct fields default to None
 # TODO: make search fields in a list of a Meta class or smth. like that
 # TODO: apply ts vectors for search
-# TODO: add pagination capabilities maybe through dependencies
-# TODO: conver content_types into M2M?
+# TODO: implement a manual cronjob
+# TODO: check username if exists on google login

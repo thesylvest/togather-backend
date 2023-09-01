@@ -1,20 +1,16 @@
 from tortoise import fields
 
 from app.core.auth.utils import password
-from app.core.base.models import (
-    BaseCreatedAtModel,
-    LocationModel,
-    BaseDBModel,
-)
+from app.core.base.models import BaseCreatedAtModel, LocationModel, BaseDBModel, MediaModel
 
 
-class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
+class User(BaseDBModel, BaseCreatedAtModel, LocationModel, MediaModel):
     class Meta:
         table = "users"
 
     class PydanticMeta:
         backward_relations = False
-        exclude = (
+        exclude = [
             "password_hash",
             "email",
             "clubs",
@@ -27,7 +23,8 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
             "unread_notifications",
             "blocked_users",
             "blocked_by",
-        )
+        ]
+        computed = ["media"]
     username = fields.CharField(max_length=50, unique=True)
     email = fields.CharField(max_length=255, unique=True)
     first_name = fields.CharField(max_length=50, null=True)
@@ -40,7 +37,6 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
     gender = fields.CharField(max_length=10, null=True)
     social_links = fields.JSONField(null=True)
     birth_date = fields.DateField(null=True)
-    media = fields.JSONField(null=True)
     unread_notifications = fields.IntField(default=0)
     private_profile = fields.BooleanField(default=False)
 
@@ -58,7 +54,7 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel):
     places: fields.ManyToManyRelation
     notifications: fields.ManyToManyRelation
     clubs: fields.ManyToManyRelation
-    categories: fields.ManyToManyRelation
+    interests: fields.ManyToManyRelation
     blocked_by: fields.ManyToManyRelation
 
     university: fields.ForeignKeyRelation = fields.ForeignKeyField(

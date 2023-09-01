@@ -41,7 +41,7 @@ def extract_media_files(data: BaseModel, item=None) -> Tuple[List[dict], List[st
     media = []
     if data.media:
         for media_dict in data.media:
-            if item and media_dict.get("name", None) not in item.media["media"]:
+            if item and media_dict.get("name", None) not in item.media_dict["media"]:
                 url, name = S3.upload_file(media_dict["file_type"])
                 urls.append(url)
             elif item is None:
@@ -50,5 +50,5 @@ def extract_media_files(data: BaseModel, item=None) -> Tuple[List[dict], List[st
             else:
                 name = media_dict["name"]
             media.append(name)
-    data_dict["media"] = {"media": media}
+    data_dict["media_dict"] = {"media": media}
     return urls, data_dict

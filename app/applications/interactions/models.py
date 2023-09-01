@@ -84,14 +84,12 @@ class Category(BaseDBModel):
 
     class PydanticMeta:
         backward_relations = False
-        exclude = (
-            "follower",
-        )
+        exclude = ["follower"]
     name = fields.CharField(max_length=255)
     picture = fields.CharField(max_length=255, null=True)
 
     follower: fields.ManyToManyRelation = fields.ManyToManyField(
-        "models.User", related_name="categories", backward_key="category_id"
+        "models.User", related_name="interests", backward_key="category_id"
     )
 
 
