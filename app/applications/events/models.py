@@ -39,7 +39,7 @@ class Event(BaseDBModel, BaseCreatedAtModel, LocationModel, MediaModel):
 
     async def can_post(self, user) -> bool:
         try:
-            return await self.is_host(user) or await Attendee.get(event=self, user=user).is_verified
+            return await self.is_host(user) or (await Attendee.get(event=self, user=user)).is_verified
         except Exception:
             return False
 

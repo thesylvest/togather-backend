@@ -1,15 +1,16 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from tortoise.expressions import Q
 
-from app.core.base.utils import get_object_or_404, has_permission, extract_mentions_and_tags, extract_media_files
 from app.core.auth.utils.contrib import get_current_active_user, get_current_active_user_optional
 from .schemas import PostOut, PostCreate, PostUpdate, CommentOut, CommentCreate, CommentUpdate
+from app.core.base.utils import get_object_or_404, has_permission
 from app.applications.interactions.schemas import RateItem
 from app.applications.interactions.models import Tag, Rate
 from app.applications.organisations.models import Club
 from app.applications.events.models import Event
 from app.applications.users.models import User
 from app.core.base.paginator import Paginator
+from app.core.base.extractor import Extractor
 from .utils import PostFilter, CommentFilter
 from .models import Post, Comment
 
@@ -36,20 +37,23 @@ async def get_post(
 
 
 @post_router.post("", tags=["posts"])
-async def create_club(
+async def create_post(
     data: PostCreate,
-    mentions_and_tags=Depends(extract_mentions_and_tags(PostCreate, ["title", "content"])),
     current_user: User = Depends(get_current_active_user),
 ):
-    print(mentions_and_tags)
-    urls, post_dict = extract_media_files(data=data)
-
     if data.event_id:
         event = await get_object_or_404(Event, id=data.event_id)
         await has_permission(event.can_post, current_user)
     elif data.author_club_id:
         club = await get_object_or_404(Club, id=data.author_club_id)
         await has_permission(club.can_post, current_user)
+    else:
+        raise HTTPException(status_code=422, detail="At least an event or a club must specified")
+
+    extractor = Extractor(data)
+    urls, media_dict = extractor.media_files()
+    post_dict = data.dict(exclude_none=True, exclude=["media"])
+    post_dict["media_dict"] = media_dict
 
     post = await Post.create(**post_dict, creator=current_user)
 
@@ -63,13 +67,15 @@ async def create_club(
 async def update_post(
     id: int,
     data: PostUpdate,
-    mentions_and_tags=Depends(extract_mentions_and_tags(PostUpdate, ["title", "content"])),
     current_user: User = Depends(get_current_active_user),
 ):
-    print(mentions_and_tags)
     post: Post = await get_object_or_404(Post, id=id)
     await has_permission(post.is_creator, current_user)
-    urls, post_dict = extract_media_files(data=data, item=post)
+
+    extractor = Extractor(data)
+    urls, media_dict = extractor.media_files()
+    post_dict = data.dict(exclude_none=True, exclude=["media"])
+    post_dict["media_dict"] = media_dict
 
     await post.update_from_dict(post_dict).save()
 
@@ -132,11 +138,12 @@ async def get_comment(
 @comment_router.post("", tags=["comments"])
 async def create_comment(
     data: CommentCreate,
-    mentions_and_tags=Depends(extract_mentions_and_tags(CommentCreate, ["content"])),
     current_user: User = Depends(get_current_active_user),
 ):
-    print(mentions_and_tags)
-    urls, comment_dict = extract_media_files(data=data)
+    extractor = Extractor(data)
+    urls, media_dict = extractor.media_files()
+    comment_dict = data.dict(exclude_none=True, exclude=["media"])
+    comment_dict["media_dict"] = media_dict
 
     comment: Comment = await Comment.create(**comment_dict, creator=current_user)
 
@@ -150,13 +157,15 @@ async def create_comment(
 async def update_comment(
     id: int,
     data: CommentUpdate,
-    mentions_and_tags=Depends(extract_mentions_and_tags(CommentUpdate, ["content"])),
     current_user: User = Depends(get_current_active_user),
 ):
-    print(mentions_and_tags)
     comment: Comment = await get_object_or_404(Comment, id=id)
     await has_permission(comment.is_creator, current_user)
-    urls, comment_dict = extract_media_files(data=data, item=comment)
+
+    extractor = Extractor(data)
+    urls, media_dict = extractor.media_files()
+    comment_dict = data.dict(exclude_none=True, exclude=["media"])
+    comment_dict["media_dict"] = media_dict
 
     await comment.update_from_dict(comment_dict).save()
 

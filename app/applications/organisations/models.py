@@ -73,9 +73,7 @@ class Place(Organisation):
 
     class PydanticMeta:
         backward_relations = False
-        exclude = [
-            "owners",
-        ]
+        exclude = ["owners"]
         computed = ["media"]
     is_valid = fields.BooleanField(default=False)
 
@@ -96,16 +94,13 @@ class Place(Organisation):
             await self.delete()
 
 
-class Advertisement(BaseDBModel, BaseCreatedUpdatedAtModel):
+class Advertisement(BaseDBModel, BaseCreatedUpdatedAtModel, MediaModel):
     class Meta:
         table = "advertisements"
 
     class PydanticMeta:
-        exclude = (
-            "place",
-        )
+        exclude = ["place"]
     description = fields.CharField(max_length=255, null=True)
-    picture = fields.CharField(max_length=255, null=True)
 
     place: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.Place", related_name="advertisements", on_delete=fields.CASCADE

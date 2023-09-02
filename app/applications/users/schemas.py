@@ -1,8 +1,8 @@
 from tortoise.contrib.pydantic import pydantic_model_creator
+from pydantic import BaseModel, EmailStr, Field
 from tortoise.expressions import Q, Subquery
-from pydantic import BaseModel, EmailStr
-from datetime import datetime
 from typing import Optional
+from datetime import date
 
 from app.core.base.schemas import BaseOutSchema
 from .models import User, Connection
@@ -10,6 +10,14 @@ from .models import User, Connection
 
 class UserOut(BaseOutSchema):
     pydantic_model = pydantic_model_creator(User)
+
+    @staticmethod
+    async def location(item: User):
+        if not item.private_profile:
+            return {
+                "latitude": item.latitude,
+                "longitude": item.longitude
+            }
 
     @staticmethod
     async def connection(item, user):
@@ -46,6 +54,8 @@ class UserOut(BaseOutSchema):
                 "allowed_actions": await UserOut.allowed_actions(item, user),
                 "connection_status": await UserOut.connection(item, user),
             },
+            "latitude": item.latitude if (not item.private_profile) or (item == user) else None,
+            "longitude": item.longitude if (not item.private_profile) or (item == user) else None,
             "post_count": counts.post_count,
             "hosted_event_count": counts.hosted_event_count,
             "attended_event_count": counts.attended_event_count,
@@ -61,11 +71,11 @@ class UserUpdate(BaseModel):
     bio: Optional[str] = None
     gender: Optional[str] = None
     social_links: Optional[dict] = None
-    birth_date: Optional[datetime] = None
+    birth_date: Optional[date] = None
     private_profile: Optional[bool] = None
     university: Optional[int] = None
-    media: list[dict] = None
-    categories: list[int] = None
+    media: list[dict] = Field(None, max_length=5)
+    interests: list[int] = None
 
 
 class LocationUpdate(BaseModel):

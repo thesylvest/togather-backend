@@ -74,7 +74,7 @@ class EventUpdate(BaseModel):
     description: Optional[str] = None
     links: Optional[dict] = None
     form: Optional[dict] = None
-    media: list[dict] = None
+    media: list[dict] = Field(None, max_length=5)
     tags: Optional[list[str]] = []
 
 

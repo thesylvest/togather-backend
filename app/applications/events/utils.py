@@ -10,12 +10,11 @@ from .models import Event, Attendee
 
 class EventFilter(FilterSet):
     model = Event
+    search_fields = ["name", "description"]
 
     @classmethod
-    def mode_filters(cls, user):
-        hidden, _ = super().mode_filters(user)
-        blocked = Q(host_user_id__in=Subquery(Blocked.filter(blocking_user=user).values("blocked_user_id")))
-        return hidden, blocked
+    def block(cls, user):
+        return Q(host_user_id__in=Subquery(Blocked.filter(blocking_user=user).values("blocked_user_id")))
 
     class Parameters(FilterSet.Parameters):
         host_club: Optional[int] = None
@@ -24,10 +23,6 @@ class EventFilter(FilterSet):
         category: Optional[int] = None
         start_date__gte: Optional[datetime] = None
         end_date__lte: Optional[datetime] = None
-
-    class SearchFields(FilterSet.SearchFields):
-        name: str
-        description: str
 
     class FunctionFilters(FilterSet.FunctionFilters):
         has_club: Optional[int] = None
@@ -50,10 +45,8 @@ class EventFilter(FilterSet):
 
 class AttendeeFilter(FilterSet):
     model = Attendee
+    search_fields = ["user__username"]
 
     class Parameters(FilterSet.Parameters):
         event: Optional[int] = None
         user: Optional[int] = None
-
-    class SearchFields(FilterSet.SearchFields):
-        user__username: str

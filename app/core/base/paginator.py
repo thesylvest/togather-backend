@@ -18,11 +18,9 @@ class Paginator:
         page: int = Query(1, ge=1, title="Page number"),
         page_size: int = Query(10, ge=1, le=100, title="Page size"),
         page_mode: PageType = Query(PageType.normal),
-        request: Request = None,
     ):
         self.page = page
         self.page_size = page_size
-        self.request = request
         self.page_mode = page_mode
 
     async def paginate(

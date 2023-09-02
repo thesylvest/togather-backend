@@ -12,21 +12,9 @@ class NotificationOut(BaseOutSchema):
 class HideOut(BaseOutSchema):
     pydantic_model = pydantic_model_creator(Hide)
 
-    @classmethod
-    async def add_fields(cls, item: Hide, user):
-        return {
-            "item": (await item.get_item())[1]
-        }
-
 
 class ReportOut(BaseOutSchema):
     pydantic_model = pydantic_model_creator(Report)
-
-    @classmethod
-    async def add_fields(cls, item: Hide, user):
-        return {
-            "item": (await item.get_item())[1]
-        }
 
 
 class HideCreate(BaseModel):

@@ -23,6 +23,8 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel, MediaModel):
             "unread_notifications",
             "blocked_users",
             "blocked_by",
+            "latitude",
+            "longitude"
         ]
         computed = ["media"]
     username = fields.CharField(max_length=50, unique=True)
@@ -39,6 +41,7 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel, MediaModel):
     birth_date = fields.DateField(null=True)
     unread_notifications = fields.IntField(default=0)
     private_profile = fields.BooleanField(default=False)
+    is_verified = fields.BooleanField(default=False)
 
     sent_connections: fields.ReverseRelation
     received_connections: fields.ReverseRelation

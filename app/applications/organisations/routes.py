@@ -3,11 +3,12 @@ from tortoise.expressions import Q
 
 from .schemas import ClubOut, PlaceOut, ClubCreate, ClubUpdate, PlaceCreate, PlaceUpdate, AdvertisementCreate, AdvertisementOut
 from app.core.auth.utils.contrib import get_current_active_user, get_current_active_user_optional, get_current_active_superuser
-from app.core.base.utils import get_object_or_404, has_permission, extract_mentions_and_tags, extract_media_files
+from app.core.base.utils import get_object_or_404, has_permission
 from .models import Club, Place, Membership, Advertisement
 from app.applications.interactions.models import Tag
 from app.applications.users.models import User
 from app.core.base.paginator import Paginator
+from app.core.base.extractor import Extractor
 from .utils import ClubFilter, PlaceFilter
 
 
@@ -35,11 +36,12 @@ async def get_club(
 @club_router.post("", tags=["clubs"])
 async def create_club(
     data: ClubCreate,
-    mentions_and_tags=Depends(extract_mentions_and_tags(ClubCreate, ["name", "description"])),
     current_user: User = Depends(get_current_active_user),
 ):
-    print(mentions_and_tags)
-    urls, club_dict = extract_media_files(data=data)
+    extractor = Extractor(data)
+    urls, media_dict = extractor.media_files()
+    club_dict = data.dict(exclude_none=True, exclude=["media"])
+    club_dict["media_dict"] = media_dict
 
     club = await Club.create(**club_dict)
     await Membership.create(club=club, user=current_user, is_admin=True)
@@ -54,13 +56,15 @@ async def create_club(
 async def update_club(
     id: int,
     data: ClubUpdate,
-    mentions_and_tags=Depends(extract_mentions_and_tags(ClubUpdate, ["name", "description"])),
     current_user: User = Depends(get_current_active_user),
 ):
-    print(mentions_and_tags)
     club: Club = await get_object_or_404(Club, id=id)
     await has_permission(club.is_admin, current_user)
-    urls, club_dict = extract_media_files(data=data, item=club)
+
+    extractor = Extractor(data)
+    urls, media_dict = extractor.media_files()
+    club_dict = data.dict(exclude_none=True, exclude=["media"])
+    club_dict["media_dict"] = media_dict
 
     await club.update_from_dict(club_dict).save()
 
@@ -132,11 +136,12 @@ async def get_place(
 @place_router.post("", tags=["places"])
 async def create_place(
     data: PlaceCreate,
-    mentions_and_tags=Depends(extract_mentions_and_tags(PlaceCreate, ["name", "description"])),
     current_user: User = Depends(get_current_active_user),
 ):
-    print(mentions_and_tags)
-    urls, place_dict = extract_media_files(data=data)
+    extractor = Extractor(data)
+    urls, media_dict = extractor.media_files()
+    place_dict = data.dict(exclude_none=True, exclude=["media"])
+    place_dict["media_dict"] = media_dict
 
     place = await Place.create(**place_dict)
     await place.owners.add(current_user)
@@ -151,13 +156,15 @@ async def create_place(
 async def update_place(
     id: int,
     data: PlaceUpdate,
-    mentions_and_tags=Depends(extract_mentions_and_tags(PlaceUpdate, ["name", "description"])),
     current_user: User = Depends(get_current_active_user),
 ):
-    print(mentions_and_tags)
     place: Place = await get_object_or_404(Place, id=id)
     await has_permission(place.is_owner, current_user)
-    urls, place_dict = extract_media_files(data=data, item=place)
+
+    extractor = Extractor(data)
+    urls, media_dict = extractor.media_files()
+    place_dict = data.dict(exclude_none=True, exclude=["media"])
+    place_dict["media_dict"] = media_dict
 
     await place.update_from_dict(place_dict).save()
 
@@ -215,7 +222,13 @@ async def add_place_ad(
 ):
     place: Place = await get_object_or_404(Place, id=id)
     has_permission(place.is_owner, current_user)
-    ad = await Advertisement.create(**data.dict(), place=place)
+
+    extractor = Extractor(data)
+    urls, media_dict = extractor.media_files()
+    add_dict = data.dict(exclude_none=True, exclude=["media"])
+    add_dict["media_dict"] = media_dict
+
+    ad = await Advertisement.create(**add_dict, place=place)
 
     return {
         "message": "Advertisement added successfully.",

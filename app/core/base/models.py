@@ -1,4 +1,5 @@
 from tortoise import models, fields
+from enum import Enum
 
 from app.core.base.media_manager import S3
 
@@ -29,5 +30,19 @@ class MediaModel:
 
     def media(self) -> list[str]:
         if self.media_dict:
-            return [S3.get_file_url(media) for media in self.media_dict["media"]]
+            return [S3.get_file_url(media) if media != "" else "" for media in self.media_dict["media"]]
         return None
+
+
+class ContentType:
+    class ModelType(str, Enum):
+        user = "User"
+        post = "Post"
+        comment = "Comment"
+        event = "Event"
+        club = "Club"
+        place = "Place"
+        hide = "Hide"
+        report = "Report"
+    item_type = fields.CharEnumField(enum_type=ModelType)
+    item_id = fields.IntField()

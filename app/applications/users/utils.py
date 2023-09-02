@@ -15,12 +15,11 @@ async def update_last_login(user_id: int) -> None:
 
 class UserFilter(FilterSet):
     model = User
+    search_fields = ["username", "first_name", "last_name", "bio"]
 
     @classmethod
-    def mode_filters(cls, user):
-        hidden, _ = super().mode_filters(user)
-        blocked = Q(id__in=Subquery(Blocked.filter(blocking_user=user).values("blocked_user_id")))
-        return hidden, blocked
+    def block(cls, user):
+        return Q(id__in=Subquery(Blocked.filter(blocking_user=user).values("blocked_user_id")))
 
     class Parameters(FilterSet.Parameters):
         posts: Optional[int] = None
@@ -29,12 +28,6 @@ class UserFilter(FilterSet):
         attended_events: Optional[int] = None
         places: Optional[int] = None
         clubs: Optional[int] = None
-
-    class SearchFields(FilterSet.SearchFields):
-        username: str
-        first_name: str
-        last_name: str
-        bio: str
 
     class FunctionFilters(FilterSet.FunctionFilters):
         connections: Optional[int] = None

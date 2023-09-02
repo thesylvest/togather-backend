@@ -2,11 +2,7 @@ from tortoise import fields
 from enum import Enum
 import asyncio
 
-from app.core.base.content_type import ContentType
-from app.core.base.models import (
-    BaseCreatedAtModel,
-    BaseDBModel,
-)
+from app.core.base.models import BaseCreatedAtModel, BaseDBModel, ContentType
 
 
 class NotificationType(str, Enum):

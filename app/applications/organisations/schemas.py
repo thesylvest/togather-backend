@@ -1,7 +1,7 @@
 from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.expressions import Subquery
+from pydantic import BaseModel, Field
 from tortoise.functions import Avg
-from pydantic import BaseModel
 from typing import Optional
 
 from app.applications.interactions.models import Tag, Rate
@@ -110,7 +110,7 @@ class OrganisationUpdate(BaseModel):
     category_id: Optional[int] = None
     description: Optional[str] = None
     links: Optional[dict] = None
-    media: list[dict] = None
+    media: list[dict] = Field(None, max_length=5)
     tags: Optional[list[str]] = []
 
 
@@ -139,4 +139,4 @@ class PlaceCreate(OrganisationCreate):
 
 class AdvertisementCreate(BaseModel):
     description: Optional[str] = None
-    picture: Optional[str] = None
+    media: list[dict] = Field(None, max_length=1)

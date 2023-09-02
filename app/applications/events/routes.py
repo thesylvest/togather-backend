@@ -4,9 +4,9 @@ from fastapi.responses import RedirectResponse
 from tortoise.expressions import Q
 from datetime import timezone
 
-from app.core.base.utils import get_object_or_404, has_permission, extract_mentions_and_tags, extract_media_files
 from app.core.auth.utils.contrib import get_current_active_user, get_current_active_user_optional
 from .schemas import EventOut, EventCreate, EventUpdate, AttendeeOut, AttendeeCreate
+from app.core.base.utils import get_object_or_404, has_permission
 from app.core.auth.utils.jwt import encode_jwt, decode_jwt
 from app.applications.interactions.schemas import RateItem
 from app.applications.interactions.models import Tag, Rate
@@ -14,6 +14,7 @@ from app.applications.organisations.models import Club
 from .utils import EventFilter, AttendeeFilter
 from app.applications.users.models import User
 from app.core.base.paginator import Paginator
+from app.core.base.extractor import Extractor
 from .models import Event, Attendee
 
 router = APIRouter()
@@ -40,15 +41,16 @@ async def get_event(
 @router.post("", tags=["events"], status_code=201)
 async def create_event(
     data: EventCreate,
-    mentions_and_tags=Depends(extract_mentions_and_tags(EventCreate, ["name", "description"])),
     current_user: User = Depends(get_current_active_user),
 ):
     if data.host_club_id:
         club: Club = await get_object_or_404(Club, id=data.host_club_id)
         has_permission(club.is_admin, current_user)
 
-    print(mentions_and_tags)
-    urls, event_dict = extract_media_files(data=data)
+    extractor = Extractor(data)
+    urls, media_dict = extractor.media_files()
+    event_dict = data.dict(exclude_none=True, exclude=["media"])
+    event_dict["media_dict"] = media_dict
 
     event = await Event.create(**event_dict, host_user=current_user)
 
@@ -62,14 +64,16 @@ async def create_event(
 async def update_event(
     id: int,
     data: EventUpdate,
-    mentions_and_tags=Depends(extract_mentions_and_tags(EventUpdate, ["name", "description"])),
     current_user: User = Depends(get_current_active_user),
 ):
-    print(mentions_and_tags)
     event: Event = await get_object_or_404(Event, id=id)
     await has_permission(event.is_host, current_user)
 
-    urls, event_dict = extract_media_files(data=data, item=event)
+    extractor = Extractor(data)
+    urls, media_dict = extractor.media_files(event)
+    event_dict = data.dict(exclude_none=True, exclude=["media"])
+    event_dict["media_dict"] = media_dict
+
     await event.update_from_dict(event_dict).save()
 
     if data.tags is not None:
@@ -156,7 +160,7 @@ async def get_verification(
 
     return {
         "verification_link": encode_jwt({
-            "id": event.name,
+            "id": event.id,
             "nbf": event.start_date.replace(tzinfo=timezone.utc).timestamp(),
             "exp": event.end_date.replace(tzinfo=timezone.utc).timestamp()
         })
@@ -178,11 +182,11 @@ async def verify(
         return HTTPException(status_code=401, detail="link has not been activated")
     except JWTError:
         return HTTPException(status_code=401, detail="link is wrong")
-    event: Event = get_object_or_404(Event, name=payload["name"])
-    attend: Attendee = Attendee.get_or_none(event=event, user=current_user)
+    event: Event = await get_object_or_404(Event, id=payload["id"])
+    attend: Attendee = await Attendee.get_or_none(event=event, user=current_user)
     if attend:
         attend.is_verified = True
-        attend.save()
+        await attend.save()
     else:
         attend: Attendee = await Attendee.create(event=event, user=current_user, is_verified=True)
     return attend

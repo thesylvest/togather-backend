@@ -8,15 +8,12 @@ from .models import Club, Place
 
 class ClubFilter(FilterSet):
     model = Club
+    search_fields = ["name", "description"]
 
     class Parameters(FilterSet.Parameters):
         category: Optional[int] = None
         posts: Optional[int] = None
         hosted_events: Optional[int] = None
-
-    class SearchFields(FilterSet.SearchFields):
-        name: str
-        description: str
 
     class FunctionFilters(FilterSet.FunctionFilters):
         admins: Optional[int] = None
@@ -42,14 +39,11 @@ class ClubFilter(FilterSet):
 
 class PlaceFilter(FilterSet):
     model = Place
+    search_fields = ["name", "description"]
 
     class Parameters(FilterSet.Parameters):
         category: Optional[int] = None
         owners: Optional[int] = None
-
-    class SearchFields(FilterSet.SearchFields):
-        name: str
-        description: str
 
     class FunctionFilters(FilterSet.FunctionFilters):
         tags: Optional[str] = None

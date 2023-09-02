@@ -13,9 +13,7 @@ class HideFilter(FilterSet):
 
 class ReportFilter(FilterSet):
     model = Report
+    search_fields = ["reason"]
 
     class Parameters(FilterSet.Parameters):
-        item_type: Optional[str] = None
-
-    class SearchFields(FilterSet.SearchFields):
-        reason: str
+        item_type: Optional[Hide.ModelType] = None

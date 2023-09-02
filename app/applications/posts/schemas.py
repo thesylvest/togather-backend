@@ -1,10 +1,11 @@
 from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.expressions import Subquery
+from pydantic import BaseModel, Field
 from tortoise.functions import Avg
-from pydantic import BaseModel
 from typing import Optional
 
 from app.applications.interactions.models import Tag, Rate
+from app.applications.users.schemas import UserOut
 from app.core.base.schemas import BaseOutSchema
 from .models import Post, Comment
 
@@ -46,6 +47,7 @@ class PostOut(BaseOutSchema):
             "tags": await PostOut.tags(item),
             "rate": await PostOut.rate(item),
             "comment_count": item.comment_count,
+            "author_user": await UserOut.pydantic_model.from_tortoise_orm(item.creator) if not item.is_anon else None
         }
 
 
@@ -78,7 +80,7 @@ class CommentOut(BaseOutSchema):
     async def add_fields(cls, item: Comment, user):
         item = await Comment.annotate(
             reply_count=Subquery(item.comments.all().count()),
-        ).get(id=item.id)
+        ).prefetch_related("creator").get(id=item.id)
         return {
             "requets_data": {
                 "allowed_actions": await CommentOut.allowed_actions(item, user),
@@ -86,6 +88,7 @@ class CommentOut(BaseOutSchema):
             "tags": await CommentOut.tags(item),
             "rate": await CommentOut.rate(item),
             "reply_count": item.reply_count,
+            "author_user": await UserOut.pydantic_model.from_tortoise_orm(item.creator) if not item.is_anon else None
         }
 
 
@@ -94,7 +97,7 @@ class PostUpdate(BaseModel):
     content: Optional[str] = None
     title: Optional[str] = None
     category_id: Optional[int] = None
-    media: list[dict] = None
+    media: list[dict] = Field(None, max_length=1)
     tags: Optional[list[str]] = []
 
 

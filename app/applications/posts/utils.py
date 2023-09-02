@@ -9,21 +9,16 @@ from .models import Post, Comment
 
 class PostFilter(FilterSet):
     model = Post
+    search_fields = ["title", "content"]
 
     @classmethod
-    def mode_filters(cls, user):
-        hidden, _ = super().mode_filters(user)
-        blocked = Q(creator_id__in=Subquery(Blocked.filter(blocking_user=user).values("blocked_user_id")))
-        return hidden, blocked
+    def block(cls, user):
+        return Q(creator_id__in=Subquery(Blocked.filter(blocking_user=user).values("blocked_user_id")))
 
     class Parameters(FilterSet.Parameters):
         category: Optional[int] = None
         creator: Optional[int] = None
         author_club: Optional[int] = None
-
-    class SearchFields(FilterSet.SearchFields):
-        title: str
-        content: str
 
     class FunctionFilters(FilterSet.FunctionFilters):
         tags: Optional[str] = None
@@ -39,20 +34,16 @@ class PostFilter(FilterSet):
 
 class CommentFilter(FilterSet):
     model = Comment
+    search_fields = ["content"]
 
     @classmethod
-    def mode_filters(cls, user):
-        hidden, _ = super().mode_filters(user)
-        blocked = Q(creator__in=Subquery(user.blocked_users.all()))
-        return hidden, blocked
+    def block(cls, user):
+        return Q(creator_id__in=Subquery(Blocked.filter(blocking_user=user).values("blocked_user_id")))
 
     class Parameters(FilterSet.Parameters):
         creator: Optional[int] = None
         post: Optional[int] = None
         reply_to: Optional[int] = None
-
-    class SearchFields(FilterSet.SearchFields):
-        content: str
 
     class FunctionFilters(FilterSet.FunctionFilters):
         tags: Optional[str] = None

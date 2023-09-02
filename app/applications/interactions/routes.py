@@ -21,9 +21,9 @@ async def report(
     report: ReportCreate,
     current_user: User = Depends(get_current_active_user)
 ):
-    report: Report = await Report.get_or_none(item_type=report.item_type, item_id=report.item_id, reporter=current_user)
-    if report:
-        await report.update_from_dict({"reason": report.reason})
+    item: Report = await Report.get_or_none(item_type=report.item_type, item_id=report.item_id, reporter=current_user)
+    if item:
+        return await item.update_from_dict({"reason": report.reason}).save()
     return await Report.create(**report.dict(), reporter=current_user)
 
 
