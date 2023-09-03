@@ -14,6 +14,10 @@ class ClubFilter(FilterSet):
         category: Optional[int] = None
         posts: Optional[int] = None
         hosted_events: Optional[int] = None
+        latitude__lte: Optional[float] = None
+        latitude__gte: Optional[float] = None
+        longitude__lte: Optional[float] = None
+        longitude__gte: Optional[float] = None
 
     class FunctionFilters(FilterSet.FunctionFilters):
         admins: Optional[int] = None
@@ -44,6 +48,10 @@ class PlaceFilter(FilterSet):
     class Parameters(FilterSet.Parameters):
         category: Optional[int] = None
         owners: Optional[int] = None
+        latitude__lte: Optional[float] = None
+        latitude__gte: Optional[float] = None
+        longitude__lte: Optional[float] = None
+        longitude__gte: Optional[float] = None
 
     class FunctionFilters(FilterSet.FunctionFilters):
         tags: Optional[str] = None

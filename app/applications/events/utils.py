@@ -23,6 +23,10 @@ class EventFilter(FilterSet):
         category: Optional[int] = None
         start_date__gte: Optional[datetime] = None
         end_date__lte: Optional[datetime] = None
+        latitude__lte: Optional[float] = None
+        latitude__gte: Optional[float] = None
+        longitude__lte: Optional[float] = None
+        longitude__gte: Optional[float] = None
 
     class FunctionFilters(FilterSet.FunctionFilters):
         has_club: Optional[int] = None

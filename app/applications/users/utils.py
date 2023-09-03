@@ -28,6 +28,10 @@ class UserFilter(FilterSet):
         attended_events: Optional[int] = None
         places: Optional[int] = None
         clubs: Optional[int] = None
+        latitude__lte: Optional[float] = None
+        latitude__gte: Optional[float] = None
+        longitude__lte: Optional[float] = None
+        longitude__gte: Optional[float] = None
 
     class FunctionFilters(FilterSet.FunctionFilters):
         connections: Optional[int] = None

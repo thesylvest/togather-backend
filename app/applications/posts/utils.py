@@ -19,6 +19,10 @@ class PostFilter(FilterSet):
         category: Optional[int] = None
         creator: Optional[int] = None
         author_club: Optional[int] = None
+        latitude__lte: Optional[float] = None
+        latitude__gte: Optional[float] = None
+        longitude__lte: Optional[float] = None
+        longitude__gte: Optional[float] = None
 
     class FunctionFilters(FilterSet.FunctionFilters):
         tags: Optional[str] = None
