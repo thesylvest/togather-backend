@@ -33,7 +33,7 @@ class Post(BaseDBModel, BaseCreatedUpdatedAtModel, LocationModel, MediaModel):
 
     async def is_creator(self, user):
         if self.author_club:
-            return self.creator or await self.author_club.is_admin(user)
+            return (self.creator == user and self.author_club.post_policy) or await self.author_club.is_admin(user)
         return self.creator == user
 
 

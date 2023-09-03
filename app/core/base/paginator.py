@@ -1,4 +1,4 @@
-from fastapi import HTTPException, Request, Query
+from fastapi import HTTPException, Query
 from tortoise.queryset import QuerySet
 from typing import Optional, Type
 from enum import Enum
@@ -33,6 +33,7 @@ class Paginator:
             raise HTTPException(status_code=400, detail="Invalid page number")
         annotations = queryset[1]
         queryset = queryset[0]
+
         total = await queryset.count()
         offset = (self.page - 1) * self.page_size
 

@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends
 
-from app.core.auth.utils.contrib import get_current_active_user
+from app.core.auth.utils.contrib import get_current_active_user, get_current_active_user_optional
 from app.applications.users.models import User
+from app.core.base.paginator import Paginator
 from .schemas import HideCreate, ReportCreate
 from .models import Category, Hide, Report
+from .utils import TagFilter
 
 interaction_router = APIRouter()
 
@@ -27,6 +29,24 @@ async def report(
     return await Report.create(**report.dict(), reporter=current_user)
 
 
-@interaction_router.get("/categories", tags=["categories"], status_code=200)
+@interaction_router.get("/categories", tags=["interactions"], status_code=200)
 async def get_categories():
     return await Category.all()
+
+
+@interaction_router.get("/tags", tags=["interactions"], status_code=200)
+async def get_tags(
+    paginator: Paginator = Depends(),
+    current_user: User = Depends(get_current_active_user_optional),
+    tags=Depends(TagFilter.dependency())
+):
+    tags = tags[0].all().distinct().limit(
+        paginator.page_size
+    ).offset(
+        (paginator.page - 1) * paginator.page_size
+    ).values_list("name", flat=True)
+    return {
+        "has_next": True,
+        "count": 9999999,
+        "results": await tags
+    }

@@ -1,35 +1,16 @@
-from typing import Annotated
-from fastapi import (
-    APIRouter,
-    Body,
-    HTTPException,
-    BackgroundTasks,
-    status,
-    Request,
-    Depends,
-    Response,
-)
+from fastapi import APIRouter, Body, HTTPException, BackgroundTasks, status, Request, Depends, Response
 from fastapi.security import OAuth2PasswordRequestForm
+from typing import Annotated
 
-from app.core.auth.utils.contrib import (
-    generate_password_reset_token,
-    verify_password_reset_token,
-    authenticate,
-    decode_google_token,
-)
+from app.core.auth.utils.contrib import generate_password_reset_token, verify_password_reset_token, authenticate, decode_google_token
+from app.core.auth.utils.jwt import create_access_token, create_refresh_token, create_access_token_from_refresh_token
 from app.core.auth.schemas import JWTToken, CredentialsSchema, Msg
-from app.core.base.exceptions import APIException
 from app.core.auth.utils.password import get_password_hash
-from app.core.auth.utils.jwt import (
-    create_access_token,
-    create_refresh_token,
-    create_access_token_from_refresh_token,
-)
-
 from app.applications.users.utils import update_last_login
+from app.core.base.exceptions import APIException
 from app.applications.users.models import User
-from app.settings import config
 import google_auth_oauthlib.flow
+from app.settings import config
 
 
 router = APIRouter()
@@ -42,9 +23,7 @@ async def login_access_token(
 ):
     credentials = CredentialsSchema(username=form_data.username, password=form_data.password)
     user = await authenticate(credentials)
-    if user:
-        await update_last_login(user.id)
-    elif not user:
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect credentials"
         )
@@ -53,26 +32,32 @@ async def login_access_token(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
         )
 
+    await update_last_login(user.id)
+
+    refresh_token = create_refresh_token(
+        data={"user_id": user.id, "username": user.username, "email": user.email},
+    )
+
     response.set_cookie(
         key="refresh_token",
-        value=create_refresh_token(
-            data={"user_id": user.id, "username": user.username, "email": user.email},
-        ),
+        value=refresh_token,
         httponly=True,
         max_age=config.JWT_REFRESH_TOKEN_EXPIRE_MINUTES * 60,
         expires=config.JWT_REFRESH_TOKEN_EXPIRE_MINUTES * 60,
     )
+    print(refresh_token)
 
     return {
         "access_token": create_access_token(
-            data={"user_id": user.id, "username": user.username, "email": user.email},
+            data={"user_id": user.id, "username": user.username, "email": user.email}
         ),
+        "refresh_token": refresh_token,
         "token_type": "bearer",
     }
 
 
 @router.get("/refresh-token", response_model=JWTToken, tags=["auth"])
-async def refresh_token(request: Request):
+async def refresh_token(request: Request, response: Response):
     token = request.cookies.get("refresh_token")
     if token is None:
         raise APIException(
@@ -80,10 +65,23 @@ async def refresh_token(request: Request):
             detail="Refresh token not found",
         )
 
-    access_token = create_access_token_from_refresh_token(token)
+    access_token, payload = create_access_token_from_refresh_token(token)
+
+    new_refresh_token = create_refresh_token(
+        data={"user_id": payload["user_id"], "username": payload["username"], "email": payload["email"]},
+    )
+
+    response.set_cookie(
+        key="refresh_token",
+        value=new_refresh_token,
+        httponly=True,
+        max_age=config.JWT_REFRESH_TOKEN_EXPIRE_MINUTES * 60,
+        expires=config.JWT_REFRESH_TOKEN_EXPIRE_MINUTES * 60,
+    )
 
     return {
         "access_token": access_token,
+        "refresh_token": new_refresh_token,
         "token_type": "bearer",
     }
 
@@ -170,8 +168,10 @@ async def register_user(user_in: CredentialsSchema, background_tasks: Background
                 password=user_in.password,
             )
 
+        user_data = {"user_id": created_user.id, "username": created_user.username, "email": created_user.email}
         return {
-            "access_token": create_access_token(data={"user_id": created_user.id}),
+            "access_token": create_access_token(data=user_data),
+            "refresh_token": create_refresh_token(data=user_data),
             "token_type": "bearer",
         }
     else:

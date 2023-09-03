@@ -102,8 +102,9 @@ async def rate_event(
     current_user: User = Depends(get_current_active_user),
 ):
     event: Event = await get_object_or_404(Event, id=id)
+    await has_permission(event.can_rate, current_user)
     try:
-        rate_obj = await current_user.rates.get(item_id=event.id, item_type="Event")
+        rate_obj = await current_user.rates.filter(item_id=event.id, item_type="Event").get()
         rate_obj.rate = rate.rate
         await rate_obj.save()
     except Exception:
@@ -159,7 +160,7 @@ async def get_verification(
     await has_permission(event.is_host, current_user)
 
     return {
-        "verification_link": encode_jwt({
+        "verification_token": encode_jwt({
             "id": event.id,
             "nbf": event.start_date.replace(tzinfo=timezone.utc).timestamp(),
             "exp": event.end_date.replace(tzinfo=timezone.utc).timestamp()
@@ -192,9 +193,8 @@ async def verify(
     return attend
 
 
-@router.get("/forms", tags=["events"], status_code=200)
+@router.get("/attendee/forms", tags=["events"], status_code=200)
 async def get_forms(
-    event_id: int,
     paginator: Paginator = Depends(),
     current_user: User | None = Depends(get_current_active_user),
     forms=Depends(AttendeeFilter.dependency())

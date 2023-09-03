@@ -61,5 +61,4 @@ def create_access_token_from_refresh_token(token: str):
 
     return create_access_token(
         data={"username": username, "email": email, "user_id": user_id},
-        expires_delta=timedelta(minutes=config.JWT_ACCESS_TOKEN_EXPIRE_MINUTES),
-    )
+    ), payload

@@ -45,7 +45,7 @@ class EventFilter(FilterSet):
 
 class AttendeeFilter(FilterSet):
     model = Attendee
-    search_fields = ["user__username"]
+    search_fields = ["user__username", "event__name"]
 
     class Parameters(FilterSet.Parameters):
         event: Optional[int] = None

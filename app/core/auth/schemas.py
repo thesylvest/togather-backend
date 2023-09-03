@@ -14,6 +14,7 @@ class CredentialsSchema(BaseModel):
 
 class JWTToken(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str
 
 

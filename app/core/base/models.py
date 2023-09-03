@@ -44,5 +44,6 @@ class ContentType:
         place = "Place"
         hide = "Hide"
         report = "Report"
+        attendee = "Attendee"
     item_type = fields.CharEnumField(enum_type=ModelType)
     item_id = fields.IntField()

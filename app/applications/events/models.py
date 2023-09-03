@@ -43,6 +43,12 @@ class Event(BaseDBModel, BaseCreatedAtModel, LocationModel, MediaModel):
         except Exception:
             return False
 
+    async def can_rate(self, user) -> bool:
+        try:
+            return (await Attendee.get(event=self, user=user)).is_verified
+        except Exception:
+            return False
+
 
 class Attendee(BaseDBModel):
     class Meta:
@@ -50,9 +56,7 @@ class Attendee(BaseDBModel):
 
     class PydanticMeta:
         backward_relations = False
-        exclude = (
-            "form_data",
-        )
+        exclude = ["form_data"]
     is_verified = fields.BooleanField(default=False)
     form_data = fields.JSONField(null=True)
     event: fields.ForeignKeyRelation = fields.ForeignKeyField(

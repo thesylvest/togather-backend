@@ -34,7 +34,7 @@ class ClubOut(BaseOutSchema):
             "canHide": user is not None,
             "canUpdate": user is not None and is_admin,
             "canDelete": False,
-            "canPost": user is not None and is_admin,
+            "canPost": user is not None and await item.can_post(user),
             "canEvent": user is not None and is_admin,
             "canModerate": user is not None and is_admin,
             "canReport": user is not None,
@@ -51,7 +51,6 @@ class ClubOut(BaseOutSchema):
             "requets_data": {
                 "allowed_actions": await ClubOut.allowed_actions(item, user),
             },
-            "media": await ClubOut.media(item),
             "tags": await ClubOut.tags(item),
             "rate": await ClubOut.rate(item),
             "post_count": item.post_count,
@@ -94,7 +93,6 @@ class PlaceOut(BaseOutSchema):
             },
             "owner_count": item.owner_count,
             "advertisement_count": item.advertisement_count,
-            "media": await PlaceOut.media(item),
             "tags": await PlaceOut.tags(item)
         }
 

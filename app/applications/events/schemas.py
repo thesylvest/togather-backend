@@ -59,7 +59,7 @@ class AttendeeOut(BaseOutSchema):
 
     @classmethod
     async def add_fields(cls, item: Attendee, user):
-        if (item.user == user) or (item.event.is_host(user)):
+        if (item.user == user) or (await item.event.is_host(user)):
             return {"form_data": item.form_data}
         return {}
 

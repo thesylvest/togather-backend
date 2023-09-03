@@ -71,6 +71,9 @@ class Rate(BaseDBModel, BaseCreatedAtModel, ContentType):
 class Tag(BaseDBModel, ContentType):
     class Meta:
         table = "tags"
+
+    class PydanticMeta:
+        exclude = ["item_type", "item_id", "id"]
     name = fields.CharField(max_length=255)
 
 

@@ -39,7 +39,7 @@ class PostOut(BaseOutSchema):
     async def add_fields(cls, item: Post, user):
         item = await Post.annotate(
             comment_count=Subquery(item.comments.all().count()),
-        ).prefetch_related("creator").get(id=item.id)
+        ).prefetch_related("creator", "author_club").get(id=item.id)
         return {
             "requets_data": {
                 "allowed_actions": await PostOut.allowed_actions(item, user),
@@ -60,15 +60,9 @@ class CommentOut(BaseOutSchema):
             item_id=item.id, item_type="Comment"
         ).annotate(avg=Avg("rate")).values("avg"))[0]["avg"]
 
-    @staticmethod
-    async def tags(item: Comment):
-        return await Tag.filter(
-            item_type="Comment", item_id=item.id
-        ).values_list("name", flat=True)
-
     @classmethod
     async def allowed_actions(cls, item: Comment, user):
-        is_creator = item.creator_id = user.id
+        is_creator = item.creator_id == user.id
         return {
             "canHide": user is not None,
             "canUpdate": user is not None and is_creator,
@@ -85,7 +79,6 @@ class CommentOut(BaseOutSchema):
             "requets_data": {
                 "allowed_actions": await CommentOut.allowed_actions(item, user),
             },
-            "tags": await CommentOut.tags(item),
             "rate": await CommentOut.rate(item),
             "reply_count": item.reply_count,
             "author_user": await UserOut.pydantic_model.from_tortoise_orm(item.creator) if not item.is_anon else None

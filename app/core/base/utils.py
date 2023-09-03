@@ -1,9 +1,9 @@
 from fastapi import HTTPException
 
 
-async def get_object_or_404(Model, **kwargs):
+def get_object_or_404(Model, **kwargs):
     try:
-        return await Model.get(**kwargs)
+        return Model.get(**kwargs)
     except Exception:
         raise HTTPException(
             status_code=404,
