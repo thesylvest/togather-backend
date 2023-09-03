@@ -8,7 +8,7 @@ from .models import FCMDevice
 router = APIRouter()
 
 
-@router.post("/", response_model=RegisterDeviceOut, status_code=200, tags=['devices'])
+@router.post("/", response_model=RegisterDeviceOut, status_code=200, tags=['base'])
 async def get_or_register_device(
     device_in: RegisterDeviceIn,
     current_user: User = Depends(get_current_active_user),

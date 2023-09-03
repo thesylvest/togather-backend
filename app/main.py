@@ -51,11 +51,12 @@ register_tortoise(
 
 Tortoise.init_models(config.APP_LIST, "models")
 # these imports must be after init models call
+from app.applications.users.routes import university_router, router as users_router
 from app.applications.organisations.routes import club_router, place_router
 from app.applications.posts.routes import post_router, comment_router
-from app.applications.events.routes import router as events_router
-from app.applications.users.routes import router as users_router
 from app.applications.interactions.routes import interaction_router
+from app.applications.events.routes import router as events_router
+from app.core.lang.routes import router as language_router
 from app.core.auth.routes import router as auth_router
 from app.core.fcm.routes import router as fcm_router
 
@@ -68,6 +69,8 @@ app.include_router(post_router, prefix='/api/posts')
 app.include_router(comment_router, prefix='/api/comments')
 app.include_router(interaction_router, prefix='/api')
 app.include_router(fcm_router, prefix='/api/fcm')
+app.include_router(university_router, prefix='/api/universities')
+app.include_router(language_router, prefix='/api/languages')
 
 
 # TODO: add email support

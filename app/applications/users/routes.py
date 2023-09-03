@@ -8,9 +8,9 @@ from app.core.auth.utils.password import get_password_hash
 from app.applications.interactions.models import Category
 from .schemas import UserOut, UserUpdate, LocationUpdate
 from app.core.base.utils import get_object_or_404
+from .models import User, Connection, University
 from app.core.base.extractor import Extractor
 from app.core.base.paginator import Paginator
-from .models import User, Connection
 from .utils import UserFilter
 
 router = APIRouter()
@@ -159,15 +159,19 @@ async def get_my_notifications(
 
 @router.get("/me/notifications/count", status_code=200, tags=["users"])
 async def get_my_unread_notifications_count(
-    zero: bool = False,
     current_user: User = Depends(get_current_active_user),
 ):
-    if zero:
-        cnt = current_user.unread_notifications
-        current_user.unread_notifications = 0
-        await current_user.save()
-        return cnt
     return current_user.unread_notifications
+
+
+@router.post("/me/notifications/count", status_code=200, tags=["users"])
+async def get_my_unread_notifications_count_reset(
+    current_user: User = Depends(get_current_active_user),
+):
+    cnt = current_user.unread_notifications
+    current_user.unread_notifications = 0
+    await current_user.save()
+    return cnt
 
 
 @router.get("/me/reports", status_code=200, tags=["users"])
@@ -203,3 +207,11 @@ async def get_connection_requests_from_me(
 ):
     sent = User.filter(received_connections__from_user=current_user, received_connections__is_accepted=False), []
     return await paginator.paginate(sent, UserOut, current_user)
+
+
+university_router = APIRouter()
+
+
+@university_router.get("", status_code=200, tags=["users"])
+async def get_universities():
+    return await University.all()

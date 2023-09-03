@@ -66,17 +66,17 @@ class UserFilter(FilterSet):
         @staticmethod
         def rated_post(value: int, queryset, user):
             return queryset.filter(rates__item_type="Post", rates__item_id=value).annotate(
-                post_rate=Sum("rates__rate", _filter=Q(rates__item_type="Post", rates__item_id=value))
-            ), ["post_rate"]
+                rate=Sum("rates__rate", _filter=Q(rates__item_type="Post", rates__item_id=value))
+            ), ["rate"]
 
         @staticmethod
         def rated_comment(value: int, queryset, user):
             return queryset.filter(rates__item_type="Comment", rates__item_id=value).annotate(
-                comment_rate=Sum("rates__rate", _filter=Q(rates__item_type="Comment", rates__item_id=value))
-            ), ["comment_rate"]
+                rate=Sum("rates__rate", _filter=Q(rates__item_type="Comment", rates__item_id=value))
+            ), ["rate"]
 
         @staticmethod
         def rated_event(value: int, queryset, user):
             return queryset.filter(rates__item_type="Event", rates__item_id=value).annotate(
-                event_rate=Sum("rates__rate", _filter=Q(rates__item_type="Event", rates__item_id=value))
-            ), ["event_rate"]
+                rate=Sum("rates__rate", _filter=Q(rates__item_type="Event", rates__item_id=value))
+            ), ["rate"]

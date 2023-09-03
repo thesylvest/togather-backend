@@ -43,7 +43,7 @@ class EventOut(BaseOutSchema):
     async def add_fields(cls, item: Event, user):
         item = await Event.annotate(
             attendee_count=Subquery(item.attendees.all().count()),
-        ).get(id=item.id)
+        ).prefetch_related("host_club").get(id=item.id)
         return {
             "request_data": {
                 "allowed_actions": await EventOut.allowed_actions(item, user),

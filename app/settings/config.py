@@ -19,7 +19,8 @@ APPLICATIONS = [
     'organisations',
 ]
 CORE_APPLICATIONS = [
-    'fcm'
+    'fcm',
+    'lang'
 ]
 APP_LIST = [f'{APPLICATIONS_MODULE}.{app}.models' for app in APPLICATIONS]\
     + [f'{CORE_APPLICATIONS_MODULE}.{app}.models' for app in CORE_APPLICATIONS]\

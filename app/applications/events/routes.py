@@ -66,7 +66,7 @@ async def update_event(
     data: EventUpdate,
     current_user: User = Depends(get_current_active_user),
 ):
-    event: Event = await get_object_or_404(Event, id=id)
+    event: Event = await get_object_or_404(Event, id=id).prefetch_related("host_club")
     await has_permission(event.is_host, current_user)
 
     extractor = Extractor(data)
@@ -80,7 +80,7 @@ async def update_event(
         await Tag.filter(Q(item_id=id, item_type="Event") & ~Q(name__in=data.tags)).delete()
         for tag in data.tags:
             await Tag.get_or_create(name=tag, item_id=id, item_type="Event")
-    return {"updated": event, "media_upload": urls}
+    return {"updated": await EventOut.serialize(event, current_user), "media_upload": urls}
 
 
 @router.delete("/{id}", tags=["events"], status_code=200)

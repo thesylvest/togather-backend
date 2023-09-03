@@ -101,6 +101,8 @@ class University(BaseDBModel, LocationModel):
         table = "universities"
     name = fields.CharField(max_length=255, unique=True)
 
+    class PydanticMeta:
+        backward_relations = False
     clubs: fields.ReverseRelation
     students: fields.ReverseRelation
     events: fields.ReverseRelation

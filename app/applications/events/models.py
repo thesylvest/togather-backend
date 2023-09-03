@@ -32,6 +32,7 @@ class Event(BaseDBModel, BaseCreatedAtModel, LocationModel, MediaModel):
     )
 
     async def is_host(self, user) -> bool:
+        await self.fetch_related("host_club")
         if self.host_club:
             status = await self.host_club.membership_status(user)
             return status == 1
