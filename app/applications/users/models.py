@@ -1,7 +1,8 @@
+from tortoise.expressions import Q
 from tortoise import fields
 
-from app.core.auth.utils import password
 from app.core.base.models import BaseCreatedAtModel, LocationModel, BaseDBModel, MediaModel
+from app.core.auth.utils import password
 
 
 class User(BaseDBModel, BaseCreatedAtModel, LocationModel, MediaModel):
@@ -12,7 +13,6 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel, MediaModel):
         backward_relations = False
         exclude = [
             "password_hash",
-            "email",
             "clubs",
             "hosted_events",
             "attended_events",
@@ -34,7 +34,6 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel, MediaModel):
     password_hash = fields.CharField(max_length=60, null=True)
     last_login = fields.DatetimeField(null=True)
     is_active = fields.BooleanField(default=True)
-    is_superuser = fields.BooleanField(default=False)
     bio = fields.TextField(null=True)
     gender = fields.CharField(max_length=10, null=True)
     social_links = fields.JSONField(null=True)
@@ -66,6 +65,18 @@ class User(BaseDBModel, BaseCreatedAtModel, LocationModel, MediaModel):
     blocked_users: fields.ManyToManyRelation = fields.ManyToManyField(
         "models.User", related_name="blocked_by", through="blocked", backward_key="blocking_user_id", forward_key="blocked_user_id"
     )
+
+    async def connection_status(self, user):
+        if self == user:
+            return Connection.Status.me
+        connection = await Connection.get_or_none(
+            Q(from_user=user, to_user=self) | Q(from_user=self, to_user=user)
+        ).prefetch_related("from_user", "to_user")
+        if connection:
+            if connection.is_accepted:
+                return Connection.Status.connected
+            return Connection.Status.request_sent if connection.from_user == self else Connection.Status.request_received
+        return Connection.Status.not_connected
 
     @classmethod
     async def create(cls, user) -> "User":

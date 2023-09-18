@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from tortoise.expressions import Q
 
 from .schemas import ClubOut, PlaceOut, ClubCreate, ClubUpdate, PlaceCreate, PlaceUpdate, AdvertisementCreate, AdvertisementOut
-from app.core.auth.utils.contrib import get_current_active_user, get_current_active_user_optional, get_current_active_superuser
+from app.core.auth.utils.contrib import get_current_active_user, get_current_active_user_optional
 from app.core.base.utils import get_object_or_404, has_permission
 from .models import Club, Place, Membership, Advertisement
 from app.applications.interactions.models import Tag
@@ -15,16 +15,16 @@ from .utils import ClubFilter, PlaceFilter
 club_router = APIRouter()
 
 
-@club_router.get("", tags=["clubs"], status_code=200)
+@club_router.get("/", tags=["clubs"], status_code=200)
 async def get_clubs(
     paginator: Paginator = Depends(),
     current_user: User = Depends(get_current_active_user_optional),
     clubs=Depends(ClubFilter.dependency())
 ):
-    return await paginator.paginate(clubs, ClubOut, current_user)
+    return await paginator(clubs, ClubOut, current_user)
 
 
-@club_router.get("/{id}", tags=["clubs"])
+@club_router.get("/{id}/", tags=["clubs"])
 async def get_club(
     id: int,
     current_user: User = Depends(get_current_active_user_optional),
@@ -33,7 +33,7 @@ async def get_club(
     return await ClubOut.serialize(club, current_user)
 
 
-@club_router.post("", tags=["clubs"])
+@club_router.post("/", tags=["clubs"])
 async def create_club(
     data: ClubCreate,
     current_user: User = Depends(get_current_active_user),
@@ -52,7 +52,7 @@ async def create_club(
     return {"created": await ClubOut.serialize(club, current_user), "media_upload": urls}
 
 
-@club_router.put("/{id}", tags=["clubs"], status_code=200)
+@club_router.put("/{id}/", tags=["clubs"], status_code=200)
 async def update_club(
     id: int,
     data: ClubUpdate,
@@ -75,7 +75,7 @@ async def update_club(
     return {"updated": await ClubOut.serialize(club, current_user), "media_upload": urls}
 
 
-@club_router.post("/{id}/join", tags=["clubs"], status_code=200)
+@club_router.post("/{id}/join/", tags=["clubs"], status_code=200)
 async def join(
     id: int,
     current_user: User = Depends(get_current_active_user),
@@ -84,12 +84,12 @@ async def join(
     if await club.members.filter(id=current_user.id).exists():
         await club.members.remove(current_user)
         await club.destroy_non_admin()
-        return {"message": "successfully leaved"}
+        return False
     await club.members.add(current_user)
-    return {"message": "successfully joined"}
+    return True
 
 
-@club_router.post("/{id}/admins/{user_id}", tags=["clubs"], status_code=200)
+@club_router.post("/{id}/admins/{user_id}/", tags=["clubs"], status_code=200)
 async def add_admin(
     id: int,
     user_id: int,
@@ -106,25 +106,22 @@ async def add_admin(
     if not membership.is_admin:
         await club.destroy_non_admin()
 
-    return {
-        "message": f"User {user_id}'s admin status changed: {membership.is_admin}",
-        "membership_id": membership.id,
-    }
+    return membership.is_admin
 
 
 place_router = APIRouter()
 
 
-@place_router.get("", tags=["places"])
+@place_router.get("/", tags=["places"])
 async def get_places(
     paginator: Paginator = Depends(),
     current_user: User = Depends(get_current_active_user_optional),
     places=Depends(PlaceFilter.dependency())
 ):
-    return await paginator.paginate(places, PlaceOut, current_user)
+    return await paginator(places, PlaceOut, current_user)
 
 
-@place_router.get("/{id}", tags=["places"])
+@place_router.get("/{id}/", tags=["places"])
 async def get_place(
     id: int,
     current_user: User = Depends(get_current_active_user_optional),
@@ -133,7 +130,7 @@ async def get_place(
     return PlaceOut.serialize(place, current_user)
 
 
-@place_router.post("", tags=["places"])
+@place_router.post("/", tags=["places"])
 async def create_place(
     data: PlaceCreate,
     current_user: User = Depends(get_current_active_user),
@@ -152,7 +149,7 @@ async def create_place(
     return {"created": await PlaceOut.serialize(place, current_user), "media_upload": urls}
 
 
-@place_router.put("/{id}", tags=["places"], status_code=200)
+@place_router.put("/{id}/", tags=["places"], status_code=200)
 async def update_place(
     id: int,
     data: PlaceUpdate,
@@ -175,7 +172,7 @@ async def update_place(
     return {"updated": await PlaceOut.serialize(place, current_user), "media_upload": urls}
 
 
-@place_router.post("/{id}/owners/{user_id}", tags=["places"])
+@place_router.post("/{id}/owners/{user_id}/", tags=["places"])
 async def add_place_owner(
     id: int,
     user_id: int,
@@ -188,12 +185,12 @@ async def add_place_owner(
     if await place.owners.filter(id=user.id).exists():
         await place.owners.remove(user)
         await place.destroy_non_owner()
-        return {"message": "successfully removed"}
+        return False
     await place.owners.add(user)
-    return {"message": "successfully added"}
+    return True
 
 
-@place_router.post("/{id}/owners", tags=["places"])
+@place_router.post("/{id}/owners/", tags=["places"])
 async def leave_place(
     id: int,
     current_user: User = Depends(get_current_active_user),
@@ -204,17 +201,17 @@ async def leave_place(
     return {"message": "successfully removed"}
 
 
-@place_router.get("/{id}/advertisements", tags=["places"])
+@place_router.get("/{id}/advertisements/", tags=["places"])
 async def get_place_ads(
     id: int,
     paginator: Paginator = Depends(),
     current_user: User = Depends(get_current_active_user_optional),
 ):
     place: Place = await get_object_or_404(Place, id=id)
-    return await paginator.paginate(place.advertisements.all(), AdvertisementOut, current_user)
+    return await paginator(place.advertisements.all(), AdvertisementOut, current_user)
 
 
-@place_router.post("/{id}/advertisements", tags=["places"])
+@place_router.post("/{id}/advertisements/", tags=["places"])
 async def add_place_ad(
     id: int,
     data: AdvertisementCreate,
@@ -234,15 +231,3 @@ async def add_place_ad(
         "message": "Advertisement added successfully.",
         "ad": AdvertisementOut.serialize(ad, current_user),
     }
-
-
-@place_router.post("/{id}", tags=["places"])
-async def verify_place(
-    id: int,
-    current_user: User = Depends(get_current_active_superuser),
-):
-    place: Place = await get_object_or_404(Place, id=id)
-    place.is_valid = not place.is_valid
-    await place.save()
-
-    return {"message": f"New status of place {id} is {place.is_valid}"}

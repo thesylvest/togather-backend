@@ -18,16 +18,16 @@ from .models import Post, Comment
 post_router = APIRouter()
 
 
-@post_router.get("", tags=["posts"], status_code=200)
+@post_router.get("/", tags=["posts"], status_code=200)
 async def get_posts(
     paginator: Paginator = Depends(),
     current_user: User = Depends(get_current_active_user_optional),
     posts=Depends(PostFilter.dependency())
 ):
-    return await paginator.paginate(posts, PostOut, current_user)
+    return await paginator(posts, PostOut, current_user)
 
 
-@post_router.get("/{id}", tags=["posts"])
+@post_router.get("/{id}/", tags=["posts"])
 async def get_post(
     id: int,
     current_user: User = Depends(get_current_active_user_optional),
@@ -36,7 +36,7 @@ async def get_post(
     return await PostOut.serialize(post, current_user)
 
 
-@post_router.post("", tags=["posts"])
+@post_router.post("/", tags=["posts"])
 async def create_post(
     data: PostCreate,
     current_user: User = Depends(get_current_active_user),
@@ -47,8 +47,6 @@ async def create_post(
     elif data.author_club_id:
         club = await get_object_or_404(Club, id=data.author_club_id)
         await has_permission(club.can_post, current_user)
-    else:
-        raise HTTPException(status_code=422, detail="At least an event or a club must specified")
 
     if data.is_anon and len(data.media) > 0:
         raise HTTPException(status_code=400, detail="Can not share a post with media as anonymous")
@@ -68,7 +66,7 @@ async def create_post(
     return {"created": await PostOut.serialize(post, current_user), "media_upload": urls}
 
 
-@post_router.put("/{id}", tags=["posts"], status_code=200)
+@post_router.put("/{id}/", tags=["posts"], status_code=200)
 async def update_post(
     id: int,
     data: PostUpdate,
@@ -97,7 +95,7 @@ async def update_post(
     return {"updated": await PostOut.serialize(post, current_user), "media_upload": urls}
 
 
-@post_router.delete("/{id}", tags=["posts"], status_code=200)
+@post_router.delete("/{id}/", tags=["posts"], status_code=200)
 async def delete_post(
     id: int,
     current_user: User = Depends(get_current_active_user),
@@ -109,7 +107,7 @@ async def delete_post(
     return post
 
 
-@post_router.post("/{id}/rate", tags=["posts"], status_code=200)
+@post_router.post("/{id}/rate/", tags=["posts"], status_code=200)
 async def rate_post(
     id: int,
     rate: RateItem,
@@ -128,16 +126,16 @@ async def rate_post(
 comment_router = APIRouter()
 
 
-@comment_router.get("", tags=["comments"])
+@comment_router.get("/", tags=["comments"])
 async def get_comments(
     paginator: Paginator = Depends(),
     current_user: User = Depends(get_current_active_user_optional),
     comments=Depends(CommentFilter.dependency())
 ):
-    return await paginator.paginate(comments, CommentOut, current_user)
+    return await paginator(comments, CommentOut, current_user)
 
 
-@comment_router.get("/{id}", tags=["comments"])
+@comment_router.get("/{id}/", tags=["comments"])
 async def get_comment(
     id: int,
     current_user: User = Depends(get_current_active_user_optional),
@@ -146,7 +144,7 @@ async def get_comment(
     return await CommentOut.serialize(comment, current_user)
 
 
-@comment_router.post("", tags=["comments"])
+@comment_router.post("/", tags=["comments"])
 async def create_comment(
     data: CommentCreate,
     current_user: User = Depends(get_current_active_user),
@@ -163,7 +161,7 @@ async def create_comment(
     return {"created": await CommentOut.serialize(comment, current_user)}
 
 
-@comment_router.put("/{id}", tags=["comments"], status_code=200)
+@comment_router.put("/{id}/", tags=["comments"], status_code=200)
 async def update_comment(
     id: int,
     data: CommentUpdate,
@@ -179,7 +177,7 @@ async def update_comment(
     return {"updated": await CommentOut.serialize(comment, current_user)}
 
 
-@comment_router.delete("/{id}", tags=["comments"], status_code=200)
+@comment_router.delete("/{id}/", tags=["comments"], status_code=200)
 async def delete_comment(
     id: int,
     current_user: User = Depends(get_current_active_user),
@@ -191,7 +189,7 @@ async def delete_comment(
     return comment
 
 
-@comment_router.post("/{id}/rate", tags=["comments"], status_code=200)
+@comment_router.post("/{id}/rate/", tags=["comments"], status_code=200)
 async def rate_comment(
     id: int,
     rate: RateItem,

@@ -17,17 +17,22 @@ class PostFilter(FilterSet):
 
     class Parameters(FilterSet.Parameters):
         category: Optional[int] = None
-        creator: Optional[int] = None
         author_club: Optional[int] = None
+        event: Optional[int] = None
         latitude__lte: Optional[float] = None
         latitude__gte: Optional[float] = None
         longitude__lte: Optional[float] = None
         longitude__gte: Optional[float] = None
 
     class FunctionFilters(FilterSet.FunctionFilters):
+        creator: Optional[int] = None
         tags: Optional[str] = None
 
     class Functions(FilterSet.Functions):
+        @staticmethod
+        def creator(value: str, queryset, user):
+            return queryset.filter(creator_id=value, is_anon=False), []
+
         @staticmethod
         def tags(value: str, queryset, user):
             tags = value.split(",")
@@ -46,11 +51,11 @@ class CommentFilter(FilterSet):
 
     class Parameters(FilterSet.Parameters):
         creator: Optional[int] = None
-        post: Optional[int] = None
         reply_to: Optional[int] = None
 
     class FunctionFilters(FilterSet.FunctionFilters):
         tags: Optional[str] = None
+        post: Optional[int] = None
 
     class Functions(FilterSet.Functions):
         @staticmethod
@@ -59,3 +64,7 @@ class CommentFilter(FilterSet):
             return queryset.filter(
                 id__in=Subquery(Tag.filter(item_type="Place", name__in=tags).values("item_id"))
             ), []
+
+        @staticmethod
+        def post(value: int, queryset, user):
+            return queryset.filter(post_id=value, reply_to_id=None), []

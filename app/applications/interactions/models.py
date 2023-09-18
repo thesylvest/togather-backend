@@ -1,44 +1,64 @@
-from tortoise import fields
+from tortoise import fields, Model
 from enum import Enum
-import asyncio
 
 from app.core.base.models import BaseCreatedAtModel, BaseDBModel, ContentType
-
-
-class NotificationType(str, Enum):
-    user = "user"
-    post = "post"
-    event = "event"
-    like = "like"
-    comment = "comment"
+from app.core.fcm.utils import send_notification
+from app.core.base.utils import name2model
+from app.core.base.media_manager import S3
 
 
 class Notification(BaseDBModel, BaseCreatedAtModel, ContentType):
+    class Type(str, Enum):
+        connect_accepted = "connect_accept"
+        connect_sent = "connect_sent"
+
     class Meta:
         table = "notifications"
 
     class PydanticMeta:
-        computed = ("notification_data",)
+        exclude = ["sent_to"]
     is_anon = fields.BooleanField(default=False)
-    type = fields.CharEnumField(enum_type=NotificationType)
+    notif_type = fields.CharEnumField(enum_type=Type, max_length=20)
 
     sent_to: fields.ManyToManyRelation = fields.ManyToManyField(
         "models.User", related_name="notifications"
     )
 
-    def notification_data(self) -> dict[str, str]:
-        match self.type:
-            case NotificationType.user:
-                return {"computed": "compute"}
-            case NotificationType.post:
-                return {"computed": "compute"}
-            case NotificationType.event:
-                return {"computed": "compute"}
-            case NotificationType.like:
-                return {"computed": "compute"}
-            case NotificationType.comment:
-                return {"computed": "compute"}
-        return {"computed": "not compute"}
+    async def notification_data(self) -> dict[str, str]:
+        Model = name2model[self.item_type]
+        item: BaseDBModel = await Model.get(id=self.item_id)
+        data = {"title": "ToGather"}
+
+        media = item.media_dict["media"][0] if item.media_dict else None  # This is default for most models
+
+        match self.notif_type:
+            case self.Type.connect_accepted:
+                data["body"] = f"{item.username} isimli kullanıcı bağlantı isteğinizi kabul etti."
+            case self.Type.connect_sent:
+                data["body"] = f"{item.username} isimli kullanıcı size bağlantı isteği attı.",
+
+        data["image"] = S3.get_file_url(media) if media else None
+        return data
+
+    async def send(self):
+        my_data = await self.notification_data()
+        return await send_notification(self.sent_to.all(), my_data["title"], my_data["body"], my_data["image"])
+
+    @staticmethod
+    async def create_and_sent(
+        sent_to: list,
+        notification_type: Type,
+        item: Model,
+        is_anon: bool = False
+    ):
+        notification = await Notification.create(
+            notif_type=notification_type,
+            item_id=item.id,
+            item_type=item.__class__.__name__,
+            is_anon=is_anon
+        )
+        await notification.sent_to.add(*sent_to)
+        return await notification.send()
 
 
 class Report(BaseDBModel, BaseCreatedAtModel, ContentType):
@@ -84,17 +104,13 @@ class Category(BaseDBModel):
     class PydanticMeta:
         backward_relations = False
         exclude = ["follower"]
+        computed = ["picture"]
     name = fields.CharField(max_length=255)
-    picture = fields.CharField(max_length=255, null=True)
+    picture_name = fields.CharField(max_length=255, null=True)
 
     follower: fields.ManyToManyRelation = fields.ManyToManyField(
         "models.User", related_name="interests", backward_key="category_id"
     )
 
-
-async def init_category(i):
-    await Category.get_or_create(name=f"cat{i}", picture=None)
-
-for i in range(10):
-    loop = asyncio.get_event_loop()
-    asyncio.run_coroutine_threadsafe(init_category(i), loop)
+    def picture(self) -> str:
+        return S3.get_file_url(self.picture_name) if self.picture_name else None

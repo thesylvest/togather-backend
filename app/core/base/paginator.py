@@ -16,14 +16,14 @@ class Paginator:
     def __init__(
         self,
         page: int = Query(1, ge=1, title="Page number"),
-        page_size: int = Query(10, ge=1, le=100, title="Page size"),
+        page_size: int = Query(100, ge=1, le=1000, title="Page size"),
         page_mode: PageType = Query(PageType.normal),
     ):
         self.page = page
         self.page_size = page_size
         self.page_mode = page_mode
 
-    async def paginate(
+    async def __call__(
         self,
         queryset: tuple[QuerySet, list],
         Serializer: Type[BaseOutSchema],

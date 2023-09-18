@@ -22,8 +22,6 @@ class UserFilter(FilterSet):
         return Q(id__in=Subquery(Blocked.filter(blocking_user=user).values("blocked_user_id")))
 
     class Parameters(FilterSet.Parameters):
-        posts: Optional[int] = None
-        comments: Optional[int] = None
         hosted_events: Optional[int] = None
         attended_events: Optional[int] = None
         places: Optional[int] = None

@@ -20,16 +20,16 @@ from .models import Event, Attendee
 router = APIRouter()
 
 
-@router.get("", tags=["events"], status_code=200)
+@router.get("/", tags=["events"], status_code=200)
 async def get_events(
     paginator: Paginator = Depends(),
     current_user: User | None = Depends(get_current_active_user_optional),
     events=Depends(EventFilter.dependency())
 ):
-    return await paginator.paginate(events, EventOut, current_user)
+    return await paginator(events, EventOut, current_user)
 
 
-@router.get("/{id}", tags=["events"], status_code=200)
+@router.get("/{id}/", tags=["events"], status_code=200)
 async def get_event(
     id: int,
     current_user: User = Depends(get_current_active_user_optional),
@@ -38,7 +38,7 @@ async def get_event(
     return await EventOut.serialize(event, current_user)
 
 
-@router.post("", tags=["events"], status_code=201)
+@router.post("/", tags=["events"], status_code=201)
 async def create_event(
     data: EventCreate,
     current_user: User = Depends(get_current_active_user),
@@ -60,7 +60,7 @@ async def create_event(
     return {"created": await EventOut.serialize(event, current_user), "media_upload": urls}
 
 
-@router.put("/{id}", tags=["events"], status_code=200)
+@router.put("/{id}/", tags=["events"], status_code=200)
 async def update_event(
     id: int,
     data: EventUpdate,
@@ -83,7 +83,7 @@ async def update_event(
     return {"updated": await EventOut.serialize(event, current_user), "media_upload": urls}
 
 
-@router.delete("/{id}", tags=["events"], status_code=200)
+@router.delete("/{id}/", tags=["events"], status_code=200)
 async def delete_event(
     id: int,
     current_user: User = Depends(get_current_active_user),
@@ -95,7 +95,7 @@ async def delete_event(
     return event
 
 
-@router.post("/{id}/rate", tags=["events"], status_code=200)
+@router.post("/{id}/rate/", tags=["events"], status_code=200)
 async def rate_event(
     id: int,
     rate: RateItem,
@@ -112,7 +112,7 @@ async def rate_event(
     return rate_obj
 
 
-@router.post("/{id}/attend", tags=["events"], status_code=200)
+@router.post("/{id}/attend/", tags=["events"], status_code=200)
 async def attend(
     id: int,
     form_data: AttendeeCreate,
@@ -121,7 +121,7 @@ async def attend(
     event: Event = await get_object_or_404(Event, id=id)
     if await event.attendees.filter(id=current_user.id).exists():
         await event.attendees.remove(current_user)
-        return {"message": "successfully unattending"}
+        return False
     if event.form:
         if form_data is None or form_data == dict():
             raise HTTPException(
@@ -133,10 +133,10 @@ async def attend(
         user=current_user,
         event=event
     )
-    return {"message": "successfully attended"}
+    return True
 
 
-@router.post("/{id}/verify_user/{user_id}", tags=["events"], status_code=200)
+@router.post("/{id}/verify_user/{user_id}/", tags=["events"], status_code=200)
 async def verify_user(
     id: int,
     user_id: int,
@@ -151,7 +151,7 @@ async def verify_user(
     return {"verification status": attendee.is_verified}
 
 
-@router.get("/{id}/verify", tags=["events"], status_code=200)
+@router.get("/{id}/verify/", tags=["events"], status_code=200)
 async def get_verification(
     id: int,
     current_user: User = Depends(get_current_active_user),
@@ -168,7 +168,7 @@ async def get_verification(
     }
 
 
-@router.get("/verify/{token}", tags=["events"], status_code=200)
+@router.get("/verify/{token}/", tags=["events"], status_code=200)
 async def verify(
     token: str,
     current_user: User = Depends(get_current_active_user_optional),
@@ -193,10 +193,10 @@ async def verify(
     return attend
 
 
-@router.get("/attendee/forms", tags=["events"], status_code=200)
+@router.get("/attendee/forms/", tags=["events"], status_code=200)
 async def get_forms(
     paginator: Paginator = Depends(),
     current_user: User | None = Depends(get_current_active_user),
     forms=Depends(AttendeeFilter.dependency())
 ):
-    return await paginator.paginate(forms, AttendeeOut, current_user)
+    return await paginator(forms, AttendeeOut, current_user)

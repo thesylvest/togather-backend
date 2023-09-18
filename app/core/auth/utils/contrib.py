@@ -15,7 +15,7 @@ from google.oauth2 import id_token
 from google.auth.transport import requests
 
 password_reset_jwt_subject = "passwordreset"
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/access-token", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login/docs/", auto_error=False)
 
 
 def generate_password_reset_token(email):
@@ -80,15 +80,6 @@ async def get_current_active_user_optional(
 ):
     if current_user and not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
-    return current_user
-
-
-async def get_current_active_superuser(current_user: User = Security(get_current_user)):
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The user doesn't have enough privileges",
-        )
     return current_user
 
 

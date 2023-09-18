@@ -5,7 +5,7 @@ from typing import Optional
 from datetime import date
 
 from app.core.base.schemas import BaseOutSchema
-from .models import User, Connection
+from .models import User, Connection, Blocked
 
 
 class UserOut(BaseOutSchema):
@@ -20,26 +20,14 @@ class UserOut(BaseOutSchema):
             }
 
     @staticmethod
-    async def connection(item, user):
-        if item == user:
-            return Connection.Status.me
-        connection = await Connection.get_or_none(
-            Q(from_user=user, to_user=item) | Q(from_user=item, to_user=user)
-        )
-        if connection:
-            if connection.is_accepted:
-                return Connection.Status.connected
-            return Connection.Status.request_sent if connection.from_user == user else Connection.Status.request_received
-        return Connection.Status.not_connected
-
-    @staticmethod
-    async def allowed_actions(item: User, user: User):
+    async def allowed_actions(item: User, user: User, can_connect):
         return {
-            "canBlock": user is not None and (item != user) and not await item.blocked_users.filter(id=user.id).exists(),
-            "canHide": user is not None and item != user,
-            "canUpdate": user is not None and item == user,
-            "canDelete": user is not None and item == user,
-            "canReport": user is not None and item != user,
+            "can_block": user is not None and (item != user),
+            "can_connect": user is not None and (item != user) and can_connect,
+            "can_hide": user is not None and item != user,
+            "can_update": user is not None and item == user,
+            "can_delete": user is not None and item == user,
+            "can_report": user is not None and item != user,
         }
 
     @classmethod
@@ -49,14 +37,20 @@ class UserOut(BaseOutSchema):
             hosted_event_count=Subquery(item.hosted_events.all().count()),
             attended_event_count=Subquery(item.attendance.all().count()),
         )
+        connection_count = await Connection.filter(is_accepted=True).filter(Q(from_user=item) | Q(to_user=item)).count()
+        is_blocked_by = await Blocked.filter(blocking_user=item, blocked_user=user).exists()
+        is_blocked = await Blocked.filter(blocked_user=item, blocking_user=user).exists()
         return {
-            "requets_data": {
-                "allowed_actions": await UserOut.allowed_actions(item, user),
-                "connection_status": await UserOut.connection(item, user),
+            "request_data": {
+                "allowed_actions": await UserOut.allowed_actions(item, user, not (is_blocked_by or is_blocked)),
+                "connection_status": Connection.Status.not_connected if user is None else await user.connection_status(item),
+                "is_blocked_by": is_blocked_by,
+                "is_blocked": is_blocked
             },
             "latitude": item.latitude if (not item.private_profile) or (item == user) else None,
             "longitude": item.longitude if (not item.private_profile) or (item == user) else None,
             "post_count": counts.post_count,
+            "connection_count": connection_count,
             "hosted_event_count": counts.hosted_event_count,
             "attended_event_count": counts.attended_event_count,
         }
@@ -73,7 +67,7 @@ class UserUpdate(BaseModel):
     social_links: Optional[dict] = None
     birth_date: Optional[date] = None
     private_profile: Optional[bool] = None
-    university: Optional[int] = None
+    university_id: Optional[int] = None
     media: list[dict] = Field(None, max_length=5)
     interests: list[int] = None
 

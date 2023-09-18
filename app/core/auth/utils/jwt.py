@@ -1,9 +1,8 @@
 from jose.exceptions import ExpiredSignatureError, JWTError
+from fastapi import status, HTTPException
 from datetime import datetime, timedelta
-from fastapi import status
 from jose import jwt
 
-from app.core.base.exceptions import APIException
 from app.settings import config
 
 
@@ -42,21 +41,19 @@ def create_access_token_from_refresh_token(token: str):
         username: str = payload.get("username")
         email: str = payload.get("email")
         if username is None or email is None or user_id is None:
-            raise APIException(
+            raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials",
             )
     except ExpiredSignatureError:
-        raise APIException(
+        raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token expired",
-            message="Login required",
         )
     except JWTError:
-        raise APIException(
+        raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
-            message="Login required",
         )
 
     return create_access_token(

@@ -21,9 +21,6 @@ class Post(BaseDBModel, BaseCreatedUpdatedAtModel, LocationModel, MediaModel):
     creator: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", null=True, related_name="posts"
     )
-    category: fields.ForeignKeyRelation = fields.ForeignKeyField(
-        "models.Category", related_name="posts", null=True, on_delete=fields.SET_NULL
-    )
     author_club: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.Club", related_name="posts", null=True
     )

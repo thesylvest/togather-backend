@@ -10,6 +10,7 @@ class Organisation(BaseDBModel, BaseCreatedUpdatedAtModel, LocationModel, MediaM
     name = fields.CharField(max_length=255, unique=True)
     description = fields.CharField(max_length=255, null=True)
     links = fields.JSONField(null=True)
+    is_verified = fields.BooleanField(default=False)
 
 
 class Membership(BaseDBModel):
@@ -75,8 +76,6 @@ class Place(Organisation):
         backward_relations = False
         exclude = ["owners"]
         computed = ["media"]
-    is_valid = fields.BooleanField(default=False)
-
     advertisements: fields.ReverseRelation
 
     category: fields.ForeignKeyRelation = fields.ForeignKeyField(

@@ -29,25 +29,29 @@ class PostOut(BaseOutSchema):
     async def allowed_actions(cls, item: Post, user):
         is_creator = await item.is_creator(user)
         return {
-            "canHide": user is not None,
-            "canUpdate": user is not None and is_creator,
-            "canDelete": user is not None and is_creator,
-            "canReport": user is not None,
+            "can_hide": user is not None,
+            "can_update": user is not None and is_creator,
+            "can_delete": user is not None and is_creator,
+            "can_report": user is not None,
         }
 
     @classmethod
     async def add_fields(cls, item: Post, user):
         item = await Post.annotate(
             comment_count=Subquery(item.comments.all().count()),
+            rate_count=Subquery(Rate.filter(item_id=item.id, item_type="Post").count())
         ).prefetch_related("creator", "author_club").get(id=item.id)
+        user_rate = await Rate.get_or_none(item_id=item.id, item_type="Post")
         return {
-            "requets_data": {
+            "request_data": {
                 "allowed_actions": await PostOut.allowed_actions(item, user),
+                "user_rate": user_rate.rate if user_rate else None
             },
             "tags": await PostOut.tags(item),
             "rate": await PostOut.rate(item),
             "comment_count": item.comment_count,
-            "author_user": await UserOut.pydantic_model.from_tortoise_orm(item.creator) if not item.is_anon else None
+            "rate_count": item.rate_count,
+            "author_user": await UserOut.serialize(item.creator, user) if not item.is_anon else None
         }
 
 
@@ -62,24 +66,28 @@ class CommentOut(BaseOutSchema):
 
     @classmethod
     async def allowed_actions(cls, item: Comment, user):
-        is_creator = item.creator_id == user.id
+        is_creator = (user is not None) and (item.creator_id == user.id)
         return {
-            "canHide": user is not None,
-            "canUpdate": user is not None and is_creator,
-            "canDelete": user is not None and is_creator,
-            "canReport": user is not None,
+            "can_hide": user is not None,
+            "can_update": user is not None and is_creator,
+            "can_delete": user is not None and is_creator,
+            "can_report": user is not None,
         }
 
     @classmethod
     async def add_fields(cls, item: Comment, user):
         item = await Comment.annotate(
             reply_count=Subquery(item.comments.all().count()),
+            rate_count=Subquery(Rate.filter(item_id=item.id, item_type="Comment").count())
         ).prefetch_related("creator").get(id=item.id)
+        user_rate = await Rate.get_or_none(item_id=item.id, item_type="Comment")
         return {
             "requets_data": {
                 "allowed_actions": await CommentOut.allowed_actions(item, user),
+                "user_rate": user_rate.rate if user_rate else None
             },
             "rate": await CommentOut.rate(item),
+            "rate_count": item.rate_count,
             "reply_count": item.reply_count,
             "author_user": await UserOut.pydantic_model.from_tortoise_orm(item.creator) if not item.is_anon else None
         }
@@ -89,8 +97,7 @@ class PostUpdate(BaseModel):
     is_anon: Optional[bool] = None
     content: Optional[str] = None
     title: Optional[str] = None
-    category_id: Optional[int] = None
-    media: list[dict] = Field(None, max_length=1)
+    media: list[dict] = Field(None, max_length=5)
     tags: Optional[list[str]] = []
 
 
@@ -99,9 +106,8 @@ class PostCreate(PostUpdate):
     event_id: Optional[int] = None
     content: str
     title: str
-    category_id: int
-    latitude: float
-    longitude: float
+    latitude: Optional[float]
+    longitude: Optional[float]
 
 
 class CommentUpdate(BaseModel):

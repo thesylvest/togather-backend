@@ -8,7 +8,6 @@ import logging.config
 from app.core.base.exceptions import APIException, on_api_exception
 from app.settings import config
 
-
 logging.config.dictConfig(config.DEFAULT_LOGGING)
 
 app = FastAPI(
@@ -19,10 +18,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=config.CORS_ORIGINS,
-    allow_credentials=config.CORS_ALLOW_CREDENTIALS,
-    allow_methods=config.CORS_ALLOW_METHODS,
-    allow_headers=config.CORS_ALLOW_HEADERS,
+    allow_origins=["http://localhost"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.add_exception_handler(APIException, on_api_exception)
@@ -57,10 +56,12 @@ from app.applications.posts.routes import post_router, comment_router
 from app.applications.interactions.routes import interaction_router
 from app.applications.events.routes import router as events_router
 from app.core.lang.routes import router as language_router
+from app.core.admin.routes import router as admin_router
 from app.core.auth.routes import router as auth_router
 from app.core.fcm.routes import router as fcm_router
 
-app.include_router(auth_router, prefix='/api/auth')
+app.include_router(admin_router, prefix='/admin')
+app.include_router(language_router, prefix='/api/languages')
 app.include_router(users_router, prefix='/api/users')
 app.include_router(events_router, prefix='/api/events')
 app.include_router(club_router, prefix='/api/clubs')
@@ -70,7 +71,7 @@ app.include_router(comment_router, prefix='/api/comments')
 app.include_router(interaction_router, prefix='/api')
 app.include_router(fcm_router, prefix='/api/fcm')
 app.include_router(university_router, prefix='/api/universities')
-app.include_router(language_router, prefix='/api/languages')
+app.include_router(auth_router, prefix='/api/auth')
 
 
 # TODO: add email support
@@ -79,7 +80,6 @@ app.include_router(language_router, prefix='/api/languages')
 # TODO: change secret key with openssl rand -hex 32
 # TODO: add pagination capabilities for regular, randomized, recommended etc.
 # TODO: fetch user name and last name from email
-# TODO: make search fields in a list of a Meta class or smth. like that
 # TODO: apply ts vectors for search
 # TODO: implement a manual cronjob
 # TODO: check username if exists on google login

@@ -15,8 +15,8 @@ class Event(BaseDBModel, BaseCreatedAtModel, LocationModel, MediaModel):
     description = fields.TextField()
     links = fields.JSONField(null=True)
     form = fields.JSONField(null=True)
-    start_date = fields.DatetimeField()
-    end_date = fields.DatetimeField()
+    start_date = fields.DatetimeField(use_tz=True)
+    end_date = fields.DatetimeField(use_tz=True)
 
     host_user: fields.ForeignKeyRelation = fields.ForeignKeyField(
         "models.User", related_name="hosted_events", null=True

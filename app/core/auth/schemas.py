@@ -3,10 +3,14 @@ from typing import Optional
 from pydantic import BaseModel
 
 
+class Token(BaseModel):
+    token: Optional[str] = None
+
+
 class CredentialsSchema(BaseModel):
     username: Optional[str]
-    email: Optional[str] = None
     password: str
+    email: Optional[str] = None
 
     def to_dict(self):
         return self.dict(exclude_unset=True)

@@ -1,9 +1,9 @@
-from tortoise.expressions import Subquery
+from tortoise.expressions import Subquery, Q
 from typing import Optional
 
 from app.applications.interactions.models import Tag
 from app.core.base.filter_set import FilterSet
-from .models import Club, Place
+from .models import Club, Place, Membership
 
 
 class ClubFilter(FilterSet):
@@ -22,6 +22,7 @@ class ClubFilter(FilterSet):
     class FunctionFilters(FilterSet.FunctionFilters):
         admins: Optional[int] = None
         members: Optional[int] = None
+        can_post: Optional[int] = None
         tags: Optional[str] = None
 
     class Functions(FilterSet.Functions):
@@ -33,12 +34,18 @@ class ClubFilter(FilterSet):
             ), []
 
         @staticmethod
+        def members(value: int, queryset, user):
+            return queryset.filter(memberships__user_id=value, memberships__is_admin=False), []
+
+        @staticmethod
         def admins(value: int, queryset, user):
             return queryset.filter(memberships__user_id=value, memberships__is_admin=True), []
 
         @staticmethod
-        def members(value: int, queryset, user):
-            return queryset.filter(memberships__user_id=value, memberships__is_admin=False), []
+        def can_post(value: int, queryset, user):
+            return queryset.filter(
+                Q(post_policy=True) | Q(id__in=Subquery(Membership.filter(user_id=value, is_admin=True).values("club_id")))
+            ), []
 
 
 class PlaceFilter(FilterSet):

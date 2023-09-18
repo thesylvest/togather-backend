@@ -4,10 +4,9 @@ from typing import Annotated
 
 from app.core.auth.utils.contrib import generate_password_reset_token, verify_password_reset_token, authenticate, decode_google_token
 from app.core.auth.utils.jwt import create_access_token, create_refresh_token, create_access_token_from_refresh_token
-from app.core.auth.schemas import JWTToken, CredentialsSchema, Msg
+from app.core.auth.schemas import JWTToken, CredentialsSchema, Msg, Token
 from app.core.auth.utils.password import get_password_hash
 from app.applications.users.utils import update_last_login
-from app.core.base.exceptions import APIException
 from app.applications.users.models import User
 import google_auth_oauthlib.flow
 from app.settings import config
@@ -16,12 +15,46 @@ from app.settings import config
 router = APIRouter()
 
 
-@router.post("/access-token", response_model=JWTToken, tags=["auth"])
+@router.post("/login/docs/", response_model=JWTToken, tags=["auth"])
 async def login_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     response: Response,
 ):
     credentials = CredentialsSchema(username=form_data.username, password=form_data.password)
+    user = await authenticate(credentials)
+    if not user:
+        raise HTTPException(status_code=400, detail="Incorrect credentials")
+    elif not user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+
+    await update_last_login(user.id)
+
+    refresh_token = create_refresh_token(
+        data={"user_id": user.id, "username": user.username, "email": user.email},
+    )
+
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        max_age=config.JWT_REFRESH_TOKEN_EXPIRE_MINUTES * 60,
+        expires=config.JWT_REFRESH_TOKEN_EXPIRE_MINUTES * 60,
+    )
+
+    return {
+        "access_token": create_access_token(
+            data={"user_id": user.id, "username": user.username, "email": user.email}
+        ),
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+    }
+
+
+@router.post("/login/", response_model=JWTToken, tags=["auth"])
+async def login_app(
+    response: Response,
+    credentials: CredentialsSchema,
+):
     user = await authenticate(credentials)
     if not user:
         raise HTTPException(
@@ -45,30 +78,31 @@ async def login_access_token(
         max_age=config.JWT_REFRESH_TOKEN_EXPIRE_MINUTES * 60,
         expires=config.JWT_REFRESH_TOKEN_EXPIRE_MINUTES * 60,
     )
-    print(refresh_token)
 
     return {
         "access_token": create_access_token(
             data={"user_id": user.id, "username": user.username, "email": user.email}
         ),
         "refresh_token": refresh_token,
+        # "refresh_token": create_refresh_token(
+        #     data={"user_id": user.id, "username": user.username, "email": user.email},
+        # ),
         "token_type": "bearer",
     }
 
 
-@router.get("/refresh-token", response_model=JWTToken, tags=["auth"])
-async def refresh_token(request: Request, response: Response):
-    token = request.cookies.get("refresh_token")
-    if token is None:
-        raise APIException(
+@router.post("/refresh-token/", response_model=JWTToken, tags=["auth"])
+async def refresh_token(token: Token, response: Response):
+    if token.token is None:
+        raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Refresh token not found",
         )
 
-    access_token, payload = create_access_token_from_refresh_token(token)
+    access_token, payload = create_access_token_from_refresh_token(token.token)
 
     new_refresh_token = create_refresh_token(
-        data={"user_id": payload["user_id"], "username": payload["username"], "email": payload["email"]},
+        data={"user_id": payload["user_id"], "username": payload["username"], "email": payload["email"]}
     )
 
     response.set_cookie(
@@ -86,7 +120,7 @@ async def refresh_token(request: Request, response: Response):
     }
 
 
-@router.post("/password-recovery/{email}", tags=["auth"], response_model=Msg)
+@router.post("/password-recovery/{email}/", tags=["auth"], response_model=Msg)
 async def recover_password(email: str, background_tasks: BackgroundTasks):
     """
     Password Recovery
@@ -111,7 +145,7 @@ async def recover_password(email: str, background_tasks: BackgroundTasks):
     return {"msg": "Password recovery email sent"}
 
 
-@router.post("/reset-password", tags=["auth"], response_model=Msg)
+@router.post("/reset-password/", tags=["auth"], response_model=Msg)
 async def reset_password(token: str = Body(...), new_password: str = Body(...)):
     """
     Reset password
@@ -139,7 +173,7 @@ async def reset_password(token: str = Body(...), new_password: str = Body(...)):
     return {"msg": "Password updated successfully"}
 
 
-@router.post("/register", response_model=JWTToken, tags=["auth"])
+@router.post("/register/", response_model=JWTToken, tags=["auth"])
 async def register_user(user_in: CredentialsSchema, background_tasks: BackgroundTasks):
     user = await User.get_or_none(email=user_in.email)
     if user:
@@ -181,7 +215,7 @@ async def register_user(user_in: CredentialsSchema, background_tasks: Background
         )
 
 
-@router.get("/login/google", tags=["auth"])
+@router.get("/login/google/", tags=["auth"])
 async def login_google():
     # Use the client_secret.json file to identify the application requesting
     # authorization. The client ID (from that file) and access scopes are required.
@@ -214,7 +248,7 @@ async def login_google():
     return {"url": authorization_url}
 
 
-@router.get("/login/google/callback", tags=["auth"])
+@router.get("/login/google/callback/", tags=["auth"])
 async def login_google_callback(request: Request):
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
         "client_secret.json",

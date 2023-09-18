@@ -31,13 +31,14 @@ class ClubOut(BaseOutSchema):
     async def allowed_actions(cls, item: Club, user):
         is_admin = await item.is_admin(user)
         return {
-            "canHide": user is not None,
-            "canUpdate": user is not None and is_admin,
-            "canDelete": False,
-            "canPost": user is not None and await item.can_post(user),
-            "canEvent": user is not None and is_admin,
-            "canModerate": user is not None and is_admin,
-            "canReport": user is not None,
+            "can_hide": user is not None,
+            "can_update": user is not None and is_admin,
+            "can_delete": False,
+            "can_post": user is not None and await item.can_post(user),
+            "can_event": user is not None and is_admin,
+            "can_moderate": user is not None and is_admin,
+            "can_report": user is not None,
+            "can_join": True
         }
 
     @classmethod
@@ -48,13 +49,14 @@ class ClubOut(BaseOutSchema):
             member_count=Subquery(item.members.all().count()),
         ).prefetch_related("hosted_events").get(id=item.id)
         return {
-            "requets_data": {
+            "request_data": {
                 "allowed_actions": await ClubOut.allowed_actions(item, user),
+                "is_joined": user is not None and await item.members.filter(id=user.id).exists()
             },
             "tags": await ClubOut.tags(item),
             "rate": await ClubOut.rate(item),
             "post_count": item.post_count,
-            "hosted_event_count": len(item.hosted_events),
+            "event_count": len(item.hosted_events),
             "member_count": item.member_count,
             "event_attendee_count": item.event_attendee_count,
         }
@@ -74,11 +76,11 @@ class PlaceOut(BaseOutSchema):
     async def allowed_actions(cls, item: Place, user):
         is_owner = await item.is_owner(user)
         return {
-            "canHide": user is not None,
-            "canUpdate": user is not None and is_owner,
-            "canDelete": False,
-            "canAdvertise": user is not None and is_owner,
-            "canReport": user is not None,
+            "can_hide": user is not None,
+            "can_update": user is not None and is_owner,
+            "can_delete": False,
+            "can_advertise": user is not None and is_owner,
+            "can_report": user is not None,
         }
 
     @classmethod
@@ -108,14 +110,12 @@ class OrganisationUpdate(BaseModel):
     category_id: Optional[int] = None
     description: Optional[str] = None
     links: Optional[dict] = None
-    media: list[dict] = Field(None, max_length=5)
+    media: Optional[list[dict]] = Field(None, max_length=2)
     tags: Optional[list[str]] = []
 
 
 class OrganisationCreate(OrganisationUpdate):
     name: str
-    latitude: float
-    longitude: float
     category_id: int
 
 
@@ -137,4 +137,4 @@ class PlaceCreate(OrganisationCreate):
 
 class AdvertisementCreate(BaseModel):
     description: Optional[str] = None
-    media: list[dict] = Field(None, max_length=1)
+    media: Optional[list[dict]] = Field(None, max_length=1)

@@ -80,9 +80,5 @@ class FilterSet:
             filtered_query = cls.apply_filters(query_params, queryset)
             searched_query = cls.search(search_text, filtered_query)
             function_query, annotations = cls.apply_function_filters(function_filters, searched_query, current_user)
-            print("======================================")
-            print(annotations)
-            print(function_query.sql())
-            print("======================================")
             return function_query, annotations
         return item_filter

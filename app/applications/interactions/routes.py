@@ -1,16 +1,16 @@
 from fastapi import APIRouter, Depends
 
 from app.core.auth.utils.contrib import get_current_active_user, get_current_active_user_optional
+from .schemas import HideCreate, ReportCreate, CategoryOut
 from app.applications.users.models import User
 from app.core.base.paginator import Paginator
-from .schemas import HideCreate, ReportCreate
 from .models import Category, Hide, Report
 from .utils import TagFilter
 
 interaction_router = APIRouter()
 
 
-@interaction_router.post("/hides", tags=["interactions"], status_code=200)
+@interaction_router.post("/hides/", tags=["interactions"], status_code=200)
 async def hide(
     hide: HideCreate,
     current_user: User = Depends(get_current_active_user)
@@ -18,7 +18,7 @@ async def hide(
     return await Hide.get_or_create(**hide.dict(), hider=current_user)
 
 
-@interaction_router.post("/report", tags=["interactions"], status_code=200)
+@interaction_router.post("/report/", tags=["interactions"], status_code=200)
 async def report(
     report: ReportCreate,
     current_user: User = Depends(get_current_active_user)
@@ -29,12 +29,17 @@ async def report(
     return await Report.create(**report.dict(), reporter=current_user)
 
 
-@interaction_router.get("/categories", tags=["interactions"], status_code=200)
+@interaction_router.get("/categories/", tags=["interactions"], status_code=200)
 async def get_categories():
-    return await Category.all()
+    categories = await CategoryOut.from_queryset(Category.all())
+    return {
+        "has_next": False,
+        "count": len(categories),
+        "results": categories
+    }
 
 
-@interaction_router.get("/tags", tags=["interactions"], status_code=200)
+@interaction_router.get("/tags/", tags=["interactions"], status_code=200)
 async def get_tags(
     paginator: Paginator = Depends(),
     current_user: User = Depends(get_current_active_user_optional),
@@ -44,7 +49,7 @@ async def get_tags(
         paginator.page_size
     ).offset(
         (paginator.page - 1) * paginator.page_size
-    ).values_list("name", flat=True)
+    ).values("name")
     return {
         "has_next": True,
         "count": 9999999,

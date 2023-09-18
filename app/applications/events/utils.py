@@ -31,6 +31,7 @@ class EventFilter(FilterSet):
     class FunctionFilters(FilterSet.FunctionFilters):
         has_club: Optional[int] = None
         tags: Optional[str] = None
+        verified_attendees: Optional[int] = None
 
     class Functions(FilterSet.Functions):
         @staticmethod
@@ -45,6 +46,10 @@ class EventFilter(FilterSet):
             if value == 1:
                 return queryset.filter(host_club=None), []
             return queryset.exclude(host_club=None), []
+
+        @staticmethod
+        def verified_attendees(value: int, queryset, user):
+            return queryset.filter(id__in=Subquery(Attendee.filter(user_id=value, is_verified=True).values("event_id"))), []
 
 
 class AttendeeFilter(FilterSet):
